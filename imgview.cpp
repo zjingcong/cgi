@@ -1,3 +1,21 @@
+/*
+OpenGL and GLUT program to read an image, store as a RGBA pixel map, 
+display the image in "My Image View" window and write to an image file.
+It can work with jpg, png, tiff and ppm file, but the image size should not be more than 2400 * 2400.
+
+Usage: imgview or imgview <filename>
+    The program will display the image immediately with an image input, 
+    and will display a black 600*600 window without the image input.
+Key Response:
+    r or R - read from an image file
+    w or W - write the current window to an image file
+    q or Q or ESC - exit the program
+
+Jingcong Zhang
+jingcoz@g.clemson.edu
+2016-09-06
+*/
+
 # include <OpenImageIO/imageio.h>
 
 # include <cstdlib>
@@ -17,11 +35,11 @@ OIIO_NAMESPACE_USING
 # define WIDTH	    600	// window dimensions
 # define HEIGHT		600
 
-static unsigned char pixmap[600 * 600 * 4] = {0};   // pixmap read from the input image
-static unsigned char new_pixmap[600 * 600 * 4] = {0};   // modified pixmap
-static int xres;    // width
-static int yres;    // height
-static int channels;    // channel number
+static unsigned char pixmap[2400 * 2400 * 4] = {0};   // pixmap read from the input image
+static unsigned char new_pixmap[2400 * 2400 * 4] = {0};   // modified pixmap
+static int xres;    // image width
+static int yres;    // image height
+static int channels;    // image channel number
 static string infilename;   // input file name
 
 /*
@@ -71,7 +89,8 @@ void readimage()
 Routine to get image from OpenGL framebuffer and then write to an image file
 */
 void writeimage()
-{
+{   
+    // get the output file name
     string outfilename;
     cout << "enter output image filename: ";
     cin >> outfilename;
@@ -99,7 +118,7 @@ void writeimage()
         }
     }
 
-    
+    // create the subclass instance of ImageOutput which can write the right kind of file format
     ImageOutput *out = ImageOutput::create(outfilename);
     if (!out)
     {
@@ -107,10 +126,13 @@ void writeimage()
     }
     else
     {   
+        // open and prepare the image file
         ImageSpec spec (w, h, 4, TypeDesc::UINT8);
         out -> open(outfilename, spec);
+        // write the entire image
         out -> write_image(TypeDesc::UINT8, writepixmap);
         cout << "Write the image pixmap to image file " << outfilename << endl;
+        // close the file and free the ImageOutput I created
         out -> close();
         delete out;
     }
@@ -170,8 +192,6 @@ void handleKey(unsigned char key, int x, int y)
 
 /*
 Reshape Callback Routine: sets up the viewport and drawing coordinates
-This routine is called when the window is created and every time the window
-is resized, by the program or by the user
 */
 void handleReshape(int w, int h)
 {
@@ -182,7 +202,7 @@ void handleReshape(int w, int h)
         float xfactor = w / float(xres);
         float yfactor = h / float(yres);
         factor = xfactor;
-        if (xfactor > yfactor)  {factor = yfactor;}
+        if (xfactor > yfactor)  {factor = yfactor;}    // fix the image shape when scale down the image size
         glPixelZoom(factor, factor);
     }
     // make the image remain centered in the window
@@ -201,14 +221,17 @@ Main program
 */
 int main(int argc, char* argv[])
 {
+    // window size when no argument of image file
     int w = WIDTH;
     int h = HEIGHT;
+
     // optional command line
     if (argc == 2)  // one argument of image file name
     {
         cout << "Image file name: " << argv[1] << endl;
         infilename = argv[1];
         inputimage();
+        // set image size as the window size
         w = xres;
         h = yres;
     }
@@ -221,8 +244,7 @@ int main(int argc, char* argv[])
     glutInitWindowSize(w, h);
     glutCreateWindow("My Image View");
   
-    // set up the callback routines to be called when glutMainLoop() detects
-    // an event
+    // set up the callback routines to be called when glutMainLoop() detects an event
     glutDisplayFunc(display);	  // display callback
     glutKeyboardFunc(handleKey);	  // keyboard callback
     glutReshapeFunc(handleReshape); // window resize callback
