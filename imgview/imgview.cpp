@@ -42,28 +42,10 @@ void inputimage()
         xres = spec.width;
         yres = spec.height;
         channels = spec.nchannels;
-        
-        // convert the RGB image to RGBA image
-        if (channels == 3)
-        {
-            unsigned char tmp[xres * yres * channels];
-            in -> read_image(TypeDesc::UINT8, tmp);  // store the pixmap
-            int i, j, k; 
-            for (i = 0; i < xres; i++)
-            {
-                for (j = 0; j < yres; j++)
-                {   
-                    pixmap[(j * xres + i) * 4 + 3] = 255;   // set the A channel value to 255 for each pixel
-                    for (k = 0; k < 3; k++)
-                    {
-                        pixmap[(j * xres + i) * 4 + k] = tmp[(j * xres + i) * 3 + k];
-                    }
-                }
-            }
-        }
-        else    {in -> read_image(TypeDesc::UINT8, pixmap);}  // store the pixmap
-            
+
+        in -> read_image(TypeDesc::UINT8, pixmap);
         in -> close();  // close the file
+
         delete in;    // free ImageInput
     }
 }
@@ -80,6 +62,9 @@ void readimage()
     infilename = filename;
     
     inputimage();
+    
+    // change the window size to response to the input image size
+    glutReshapeWindow(xres, yres);
 }
 
 /*
@@ -92,26 +77,27 @@ void writeimage()
     cin >> outfilename;
 
     // get the current image from the OpenGL framebuffer and store in pixmap
+    int w = glutGet(GLUT_WINDOW_WIDTH);
+    int h = glutGet(GLUT_WINDOW_HEIGHT);
+    unsigned char glpixmap[w * h * 4];
     glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, glpixmap);
     
-    // if is ppm file
-    bool isppm = 0;
-    unsigned char ppmpixmap[xres * yres * 4];
-    if (outfilename.substr(outfilename.find_last_of(".") + 1, outfilename.length() - 1) == "ppm")   
+    // set the image upside down
+    unsigned char writepixmap[w * h * 4];
+    int i, j, k; 
+    for (i = 0; i < w; i++)
     {
-        isppm = 1;
-        int i, j, k; 
-        for (i = 0; i < xres; i++)
-        {
-            for (j = 0; j < yres; j++)
-            {   
-                for (k = 0; k < 3; k++)
-                {
-                    ppmpixmap[(j * xres + i) * 3 + k] = glpixmap[(j * xres + i) * 4 + k];
-                }
+        for (j = 0; j < h; j++)
+        {   
+            for (k = 0; k < 4; k++)
+            {
+                // if the outfile type is .ppm, set the image channel from 4 to 3
+                if ((outfilename.substr(outfilename.find_last_of(".") + 1, outfilename.length() - 1) == "ppm") && k < 3)
+                    {writepixmap[(j * w + i) * 3 + k] = glpixmap[((h - 1 - j) * w + i) * 4 + k];}
+                else    {writepixmap[(j * w + i) * 4 + k] = glpixmap[((h - 1 - j) * w + i) * 4 + k];}
             }
         }
-    } 
+    }
 
     
     ImageOutput *out = ImageOutput::create(outfilename);
@@ -121,10 +107,9 @@ void writeimage()
     }
     else
     {   
-        ImageSpec spec (xres, yres, 4, TypeDesc::UINT8);
+        ImageSpec spec (w, h, 4, TypeDesc::UINT8);
         out -> open(outfilename, spec);
-        if (isppm)  {out -> write_image(TypeDesc::UINT8, ppmpixmap);}
-        else {out -> write_image(TypeDesc::UINT8, glpixmap);}
+        out -> write_image(TypeDesc::UINT8, writepixmap);
         cout << "Write the image pixmap to image file " << outfilename << endl;
         out -> close();
         delete out;
@@ -133,20 +118,20 @@ void writeimage()
 
 void display()
 {   
-    // modify the pixmap: upside down the image
+    // modify the pixmap: upside down the image and add A channel value for the image
     int i, j, k; 
     for (i = 0; i < xres; i++)
     {
         for (j = 0; j < yres; j++)
         {   
-            for (k = 0; k < 4; k++)
+            new_pixmap[(j * xres + i) * 4 + 3] = 255;   // set the A channel value to 255 for each pixel
+            for (k = 0; k < channels; k++)
             {
-                new_pixmap[(j * xres + i) * 4 + k] = pixmap[((yres - 1 - j) * xres + i) * 4 + k];
+                new_pixmap[(j * xres + i) * 4 + k] = pixmap[((yres - 1 - j) * xres + i) * channels + k];
             }
         }
     }
 
-    
     // display the pixmap
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glRasterPos2i(0, 0);
