@@ -1,5 +1,7 @@
 sites
 *.d
+*~
+.*
 
 # Compiled Object files
 *.slo
