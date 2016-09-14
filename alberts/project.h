@@ -24,10 +24,9 @@ public:
 	int Save ( char *filename );
 	int Load ( char *filename );
 	
-	Shape shape;
+	Shape rightShape;
     Shape leftShape;
-	//Color3 leftColor, rightColor, shapeColor;
-	HSV_Color leftColor, rightColor, shapeColor, leftShapeColor;
+	HSV_Color leftColor, rightColor, rightShapeColor, leftShapeColor;
 	Record record;
 	bool displayMirror;
     bool is4colorproblem;

@@ -78,7 +78,7 @@ enum Commands {
   CMD_PLAY_ANIMATION,
   CMD_EDIT_LEFT_COLOR,
   CMD_EDIT_RIGHT_COLOR,
-  CMD_EDIT_SHAPE_COLOR,
+  CMD_EDIT_RIGHT_SHAPE_COLOR,
   CMD_EDIT_LEFT_SHAPE_COLOR,
   CMD_SHAPE_RECTANGLE,
   CMD_SHAPE_CIRCLE,
@@ -104,7 +104,8 @@ bool fullScreen = false;
 int winOwidth = WIDTH, winOheight = HEIGHT;
 int mouseX, mouseY;
 
-#define TOSCENEX(x) ( float ( 2 * x ) / float ( windowWidth ) - 1.0f )
+#define TOSCENEX_R(x) ( abs(float ( 2 * x ) / float ( windowWidth ) - 1.0f) )
+#define TOSCENEX_L(x) ( -abs(float ( 2 * x ) / float ( windowWidth ) - 1.0f) )
 #define TOSCENEY(y) ( float ( 2 * y - windowHeight + windowWidth ) / float ( windowWidth ) - 1.0f )
 #define TIMEDIF( t2, t1 ) ( ( t2.tv_sec - t1.tv_sec )*1000 + ( t2.tv_usec - t1.tv_usec ) / 1000 )
 
@@ -203,6 +204,7 @@ void RenderText3 ( char *text )
   }
 }
 
+/*
 void DisplayNoHelp() {
   unsigned char leftColor[3], rightColor[3], shapeColor[3];
   
@@ -264,14 +266,15 @@ void DisplayNoHelp() {
   
   glPopMatrix();
 }
+*/
 
 void Display()
 {
-  unsigned char leftColor[3], rightColor[3], shapeColor[3], leftShapeColor[3];
+  unsigned char leftColor[3], rightColor[3], rightShapeColor[3], leftShapeColor[3];
   
   HSVtoRGB (prj.leftColor.h, prj.leftColor.s, prj.leftColor.v, leftColor[0], leftColor[1], leftColor[2]);
   HSVtoRGB (prj.rightColor.h, prj.rightColor.s, prj.rightColor.v, rightColor[0], rightColor[1], rightColor[2]);
-  HSVtoRGB (prj.shapeColor.h, prj.shapeColor.s, prj.shapeColor.v, shapeColor[0], shapeColor[1], shapeColor[2]);
+  HSVtoRGB (prj.rightShapeColor.h, prj.rightShapeColor.s, prj.rightShapeColor.v, rightShapeColor[0], rightShapeColor[1], rightShapeColor[2]);
   HSVtoRGB (prj.leftShapeColor.h, prj.leftShapeColor.s, prj.leftShapeColor.v, leftShapeColor[0], leftShapeColor[1], leftShapeColor[2]);
   
   glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -296,12 +299,12 @@ void Display()
   glVertex2f ( 0, windowAspect );
   glEnd();
   
-  // Display Shape
+  // Display Right Shape
   glPushMatrix();
-  Vertex *vert = prj.shape.GetVerts();
-  glColor3ubv ( shapeColor );
-  glTranslatef ( prj.shape.posX, prj.shape.posY, 0 );
-  glScalef ( prj.shape.scaleX, prj.shape.scaleY, 1 );
+  Vertex *vert = prj.rightShape.GetVerts();
+  glColor3ubv ( rightShapeColor );
+  glTranslatef ( prj.rightShape.posX, prj.rightShape.posY, 0 );
+  glScalef ( prj.rightShape.scaleX, prj.rightShape.scaleY, 1 );
   glBegin ( GL_POLYGON );
   while ( vert != NULL ) {
     glVertex2fv ( vert->v );
@@ -329,10 +332,10 @@ void Display()
   // Display Mirror Shape
   if ( prj.displayMirror ) {
     glPushMatrix();
-    Vertex *vert = prj.shape.GetVerts();
-    glColor3ubv ( shapeColor );
-    glTranslatef ( -prj.shape.posX, prj.shape.posY, 0 );
-    glScalef ( -prj.shape.scaleX, prj.shape.scaleY, 1 );
+    Vertex *vert = prj.rightShape.GetVerts();
+    glColor3ubv ( rightShapeColor );
+    glTranslatef ( -prj.rightShape.posX, prj.rightShape.posY, 0 );
+    glScalef ( -prj.rightShape.scaleX, prj.rightShape.scaleY, 1 );
     glBegin ( GL_POLYGON );
     while ( vert != NULL ) {
       glVertex2fv ( vert->v );
@@ -362,8 +365,12 @@ void Display()
     glRasterPos2i ( 10, 36 );
     RenderText2 ( colortext );
     
-    sprintf ( colortext, "Shape color: R=%3d G=%3d B=%3d  H=%3.0f S=%4.2f V=%4.2f", shapeColor[0], shapeColor[1], shapeColor[2], prj.shapeColor.h, prj.shapeColor.s, prj.shapeColor.v );
+    sprintf ( colortext, "Right Shape color: R=%3d G=%3d B=%3d  H=%3.0f S=%4.2f V=%4.2f", rightShapeColor[0], rightShapeColor[1], rightShapeColor[2], prj.rightShapeColor.h, prj.rightShapeColor.s, prj.rightShapeColor.v );
     glRasterPos2i ( 10, 52 );
+    RenderText2 ( colortext );
+
+    sprintf ( colortext, "Left Shape color: R=%3d G=%3d B=%3d  H=%3.0f S=%4.2f V=%4.2f", leftShapeColor[0], leftShapeColor[1], leftShapeColor[2], prj.leftShapeColor.h, prj.leftShapeColor.s, prj.leftShapeColor.v );
+    glRasterPos2i ( 10, 68 );
     RenderText2 ( colortext );
     
     glPopMatrix();
@@ -584,17 +591,19 @@ void Menu( int item )
     case CMD_EDIT_RIGHT_COLOR:
       selectedColor = &prj.rightColor;
       break;
-    case CMD_EDIT_SHAPE_COLOR:
-      selectedColor = &prj.shapeColor;
+    case CMD_EDIT_RIGHT_SHAPE_COLOR:
+      selectedColor = &prj.rightShapeColor;
       break;
     case CMD_EDIT_LEFT_SHAPE_COLOR:
       selectedColor = &prj.leftShapeColor;
-      
+      break; 
     case CMD_SHAPE_RECTANGLE:
-      prj.shape.SetRectangle();
+      prj.rightShape.SetRectangle();
+      prj.leftShape.SetRectangle();
       break;
     case CMD_SHAPE_CIRCLE:
-      prj.shape.SetCircle();
+      prj.rightShape.SetCircle();
+      prj.leftShape.SetCircle();
       break;
     case CMD_SHAPE_POLYGON:
       break;
@@ -680,7 +689,7 @@ void Keyboard ( unsigned char key, int x, int y )
         Menu ( CMD_EDIT_RIGHT_COLOR );
         break;
       case '3':
-        Menu ( CMD_EDIT_SHAPE_COLOR );
+        Menu ( CMD_EDIT_RIGHT_SHAPE_COLOR );
         break;
       case '4':
         Menu ( CMD_EDIT_LEFT_SHAPE_COLOR );
@@ -715,18 +724,25 @@ void Mouse ( int button, int state, int x, int y )
   shiftOn = glutGetModifiers() & GLUT_ACTIVE_SHIFT;
   ctrlOn = glutGetModifiers() & GLUT_ACTIVE_CTRL;
   altOn = glutGetModifiers() & GLUT_ACTIVE_ALT;
+
+  int w = glutGet(GLUT_WINDOW_WIDTH);
+  int h = glutGet(GLUT_WINDOW_HEIGHT);
   
   if ( button == GLUT_LEFT_BUTTON ) {
     if ( state == GLUT_DOWN ) {
       switch ( mode ) {
         case MODE_VIEW:
           followMouse = true;
-          prj.shape.posX = TOSCENEX(x);
-          prj.shape.posY = TOSCENEY(y);
+          prj.rightShape.posX = TOSCENEX_R(x);
+          prj.rightShape.posY = TOSCENEY(y);
+          prj.leftShape.posX = TOSCENEX_L(x);
+          prj.leftShape.posY = TOSCENEY(y);
           break;
         case MODE_SHAPE:
-          prj.shape.posX = TOSCENEX(x);
-          prj.shape.posY = TOSCENEY(y);
+          prj.rightShape.posX = TOSCENEX_R(x);
+          prj.rightShape.posY = TOSCENEY(y);
+          prj.leftShape.posX = TOSCENEX_L(x);
+          prj.leftShape.posY = TOSCENEY(y);
           break;
       }
     } else {
@@ -759,12 +775,17 @@ void MouseMove ( int x, int y )
 {
   int difX = x - mouseX;
   int difY = y - mouseY;
+
+  int w = glutGet(GLUT_WINDOW_WIDTH);
+  int h = glutGet(GLUT_WINDOW_HEIGHT);
   
   switch ( mode ) {
     case MODE_VIEW:
       if ( followMouse ) {
-        prj.shape.posX = TOSCENEX(x);
-        prj.shape.posY = TOSCENEY(y);
+        prj.rightShape.posX = TOSCENEX_R(x);
+        prj.rightShape.posY = TOSCENEY(y);
+        prj.leftShape.posX = TOSCENEX_L(x);
+        prj.leftShape.posY = TOSCENEY(y);
       }
       mouseX = x;
       mouseY = y;
@@ -803,11 +824,15 @@ void MouseMove ( int x, int y )
     case MODE_SHAPE:
       if ( shiftOn ) {
         int dif = ( difX > difY ) ? difX : difY ;
-        prj.shape.scaleX = float ( 2 * dif ) / float ( windowWidth );
-        prj.shape.scaleY = float ( 2 * dif ) / float ( windowWidth );
+        prj.rightShape.scaleX = float ( 2 * dif ) / float ( windowWidth );
+        prj.rightShape.scaleY = float ( 2 * dif ) / float ( windowWidth );
+        prj.leftShape.scaleX = float ( 2 * dif ) / float ( windowWidth );
+        prj.leftShape.scaleY = float ( 2 * dif ) / float ( windowWidth );
       } else {
-        prj.shape.scaleX = float ( 2 * difX ) / float ( windowWidth );
-        prj.shape.scaleY = float ( 2 * difY ) / float ( windowWidth );
+        prj.rightShape.scaleX = float ( 2 * difX ) / float ( windowWidth );
+        prj.rightShape.scaleY = float ( 2 * difY ) / float ( windowWidth );
+        prj.leftShape.scaleX = float ( 2 * difX ) / float ( windowWidth );
+        prj.leftShape.scaleY = float ( 2 * difY ) / float ( windowWidth );
       }
       break;
   }
@@ -869,7 +894,7 @@ void CreateMenu()
   colormodemenu = glutCreateMenu ( Menu );
   glutAddMenuEntry ( "[1] Edit Left Color", CMD_EDIT_LEFT_COLOR );
   glutAddMenuEntry ( "[2] Edit Right Color", CMD_EDIT_RIGHT_COLOR );
-  glutAddMenuEntry ( "[3] Edit Shape Color", CMD_EDIT_SHAPE_COLOR );
+  glutAddMenuEntry ( "[3] Edit Right Shape Color", CMD_EDIT_RIGHT_SHAPE_COLOR );
   glutAddMenuEntry ( "[4] Edit Left Shape Color", CMD_EDIT_LEFT_SHAPE_COLOR );
   
   shapemodemenu = glutCreateMenu ( Menu );

@@ -26,12 +26,12 @@ Project::Project()
 	rightColor.v = 0.63;
     
     //right shape
-	shapeColor.h = 11.0;
-	shapeColor.s = 1.0;
-	shapeColor.v = 0.72;
+	rightShapeColor.h = 11.0;
+	rightShapeColor.s = 1.0;
+	rightShapeColor.v = 0.72;
 	
-	shape.posX = 0.5;
-	shape.posY = 0.0;
+	rightShape.posX = 0.5;
+	rightShape.posY = 0.0;
 
     //left shape
     leftShapeColor.h = 79.0;
@@ -117,7 +117,9 @@ void Project::SaveColors ( FILE *fp )
 	fprintf ( fp, "%d %d %d\n", r, g, b );
 	HSVtoRGB(rightColor.h, rightColor.s, rightColor.v, r, g, b);
 	fprintf ( fp, "%d %d %d\n", r, g, b );
-	HSVtoRGB(shapeColor.h, shapeColor.s, shapeColor.v, r, g, b);
+	HSVtoRGB(rightShapeColor.h, rightShapeColor.s, rightShapeColor.v, r, g, b);
+	fprintf ( fp, "%d %d %d\n", r, g, b );
+    HSVtoRGB(leftShapeColor.h, leftShapeColor.s, leftShapeColor.v, r, g, b);
 	fprintf ( fp, "%d %d %d\n", r, g, b );
 }
 
@@ -129,14 +131,16 @@ void Project::LoadColors ( FILE *fp )
 	fscanf ( fp, "%d %d %d", &r, &g, &b );
 	RGBtoHSV(r, g, b, rightColor.h, rightColor.s, rightColor.v);
 	fscanf ( fp, "%d %d %d", &r, &g, &b );
-	RGBtoHSV(r, g, b, shapeColor.h, shapeColor.s, shapeColor.v);
+	RGBtoHSV(r, g, b, rightShapeColor.h, rightShapeColor.s, rightShapeColor.v);
+    fscanf ( fp, "%d %d %d", &r, &g, &b );
+	RGBtoHSV(r, g, b, leftShapeColor.h, leftShapeColor.s, leftShapeColor.v);
 }
 
 void Project::SaveShape  ( FILE *fp )
 {
-	fprintf ( fp, "%f %f\n", shape.posX, shape.posY );
-	fprintf ( fp, "%f %f\n", shape.scaleX, shape.scaleY );
-	Vertex *v = shape.GetVerts ();
+	fprintf ( fp, "%f %f\n", rightShape.posX, rightShape.posY );
+	fprintf ( fp, "%f %f\n", rightShape.scaleX, rightShape.scaleY );
+	Vertex *v = rightShape.GetVerts ();
 	while ( v != NULL ) {
 		fprintf ( fp, "%f %f\n", v->v[0], v->v[1] );
 		v = v->Next;
@@ -146,13 +150,13 @@ void Project::SaveShape  ( FILE *fp )
 
 void Project::LoadShape  ( FILE *fp )
 {
-	shape.ClearVertices();
-	fscanf ( fp, "%f %f", &shape.posX, &shape.posY );
-	fscanf ( fp, "%f %f", &shape.scaleX, &shape.scaleY );
+	rightShape.ClearVertices();
+	fscanf ( fp, "%f %f", &rightShape.posX, &rightShape.posY );
+	fscanf ( fp, "%f %f", &rightShape.scaleX, &rightShape.scaleY );
 	float x, y;
 	fscanf ( fp, "%f %f", &x, &y );
 	while ( x < 999 ) {
-		shape.AddVertex ( x, y );
+		rightShape.AddVertex ( x, y );
 		fscanf ( fp, "%f %f", &x, &y );
 	}
 }

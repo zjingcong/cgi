@@ -20,11 +20,11 @@ public:
 class Shape
 {
 public:
-	Shape () : verts(NULL), scaleX(0.1), scaleY(0.1), posX(0), posY(0) { SetRectangle(); }
+	Shape () : verts(NULL), scaleX(0.1), scaleY(0.1), posX(0), posY(0) { SetRectangle(); isCircle = 0;}
 	Vertex* GetVerts() { return verts; }
 	void AddVertex ( float x, float y ) { verts = new Vertex ( verts, x, y ); }
 	void ClearVertices () { if (verts) delete verts; verts = NULL; }
-	void SetRectangle () { ClearVertices(); AddVertex(-1,-1); AddVertex(1,-1); AddVertex(1,1); AddVertex(-1,1); }
+	void SetRectangle () { ClearVertices(); AddVertex(-1,-1); AddVertex(1,-1); AddVertex(1,1); AddVertex(-1,1); isCircle = 0;}
 	void SetCircle () {
 		ClearVertices();
 		float x = 1, y =0;
@@ -40,10 +40,12 @@ public:
 			x = nx; y = ny;
 		}
 		AddVertex ( 1, 0 );
+        isCircle = 1;
 	}
 
 	float scaleX, scaleY;
 	float posX, posY;
+    bool isCircle;
 
 private:
 	Vertex *verts;
