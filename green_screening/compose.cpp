@@ -47,8 +47,8 @@ static int yres = 0;  // window height
 static int front_w = 0; // frontground image width
 static int front_h = 0; // frontground image height
 static int backchannels;  // background image channel number
-static int posX;
-static int posY;
+static int posX;  // frontground image X position
+static int posY;  // frontground image Y position
 
 
 /*

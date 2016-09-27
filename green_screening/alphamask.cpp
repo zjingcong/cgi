@@ -168,10 +168,10 @@ void alphamask()
       {
         if (h < th_hh_2 && h > th_hh_1)
         {
-          double mid;
-          mid = (th_hl_2 - th_hl_1) / 2 + th_hl_1;
-          if (h >= mid) {alpha = (h / (th_hh_2 - mid)) * 255;}
-          else {alpha = (h / (mid - th_hh_1)) * 255;}
+          // double mid;
+          // mid = (th_hl_2 - th_hl_1) / 2 + th_hl_1;
+          if (h <= th_hl_1) {alpha = (h / (th_hl_1 - th_hh_1)) * 255;}
+          else {alpha = (h / (th_hh_2 - th_hl_2)) * 255;}
         }
       }
 
@@ -215,29 +215,6 @@ int main(int argc, char* argv[])
   // write out the image
   cout << "Write Image..." << endl;
   writeimage(outfilename);
-  
-  /*
-  // window size when no argument of image file
-  int w = xres;
-  int h = yres;
-  
-  // start up the glut utilities
-  glutInit(&argc, argv);
-  
-  // create the graphics window, giving width, height, and title text
-  glutInitDisplayMode(GLUT_SINGLE | GLUT_RGBA);
-  glutInitWindowSize(w, h);
-  glutCreateWindow("Green Screening Image");
-  
-  // set up the callback routines to be called when glutMainLoop() detects an event
-  glutDisplayFunc(display);	  // display callback
-  glutKeyboardFunc(handleKey);	  // keyboard callback
-  glutReshapeFunc(handleReshape); // window resize callback
-  
-  // Routine that loops forever looking for events. It calls the registered
-  // callback routine to handle each event that is detected
-  glutMainLoop();
-  */
 
   delete pixmap;
   delete outpixmap;
