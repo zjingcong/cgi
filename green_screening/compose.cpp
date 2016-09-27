@@ -1,8 +1,23 @@
 /*
+OpenGL and GLUT program to compose the frontground png image with the background image.
+Background image's alpha channel should be 1 and should be larger than frontground image.
+
+Usage: compose <front_image_file> <back_image_file> (optional)<output_file_name>
+    The program will compose the frontground image and background image, 
+    display the associated composed image and optionally write out the associated composed image from the pixel map.
+    Frontground image default position is in the middle. 
+    User can simply modify the frontground image and write out the current window using key response.
+Key Response:
+    r or R - move the frontground image to right
+    l or L - move the frontground image to left
+    w or W - write the current window to an image file
+    q or Q or ESC - exit the program
+
 Jingcong Zhang
 jingcoz@g.clemson.edu
 2016-09-26
 */
+
 # include <OpenImageIO/imageio.h>
 
 # include <cstdlib>
@@ -20,6 +35,7 @@ jingcoz@g.clemson.edu
 using namespace std;
 OIIO_NAMESPACE_USING
 
+
 static string frontimagename; // frontground image file name
 static string backimagename;  // background image file name
 static string outfilename;  // output image file name
@@ -31,8 +47,13 @@ static int yres = 0;  // window height
 static int front_w = 0; // frontground image width
 static int front_h = 0; // frontground image height
 static int backchannels;  // background image channel number
+static int posX;
+static int posY;
 
 
+/*
+generate associated color image
+*/
 void associatedColor(const unsigned char *pixmap, unsigned char *associatedpixmap, int w, int h)
 {
   for (int i = 0; i < w; i++)
@@ -68,6 +89,11 @@ int over(int front, int back, int alpha)
 }
 
 
+/*
+composition
+  convert frontground image to associated color image (no need to do so for background image due to 255 alpha value)
+  and do the over operation between associated frontground image and background image
+*/
 void compose(unsigned char *frontpixmap, unsigned char *backpixmap, int posX, int posY)
 {
   composedpixmap = new unsigned char [xres * yres * 4];
@@ -82,10 +108,13 @@ void compose(unsigned char *frontpixmap, unsigned char *backpixmap, int posX, in
       float frontA = 0;
       if (i >= posX && i < posX + front_w && j >= posY && j < posY + front_h)
       {
-        frontR = frontpixmap[(j * front_w + i) * 4];
-        frontG = frontpixmap[(j * front_w + i) * 4 + 1];
-        frontB = frontpixmap[(j * front_w + i) * 4 + 2];
-        frontA = frontpixmap[(j * front_w + i) * 4 + 3];
+        int x, y;
+        x = i - posX;
+        y = j - posY;
+        frontR = frontpixmap[(y * front_w + x) * 4];
+        frontG = frontpixmap[(y * front_w + x) * 4 + 1];
+        frontB = frontpixmap[(y * front_w + x) * 4 + 2];
+        frontA = frontpixmap[(y * front_w + x) * 4 + 3];
       }
 
       // get associated background image pixel value (background image alpha = 255)
@@ -103,6 +132,7 @@ void compose(unsigned char *frontpixmap, unsigned char *backpixmap, int posX, in
   }
 }
 
+
 /*
 get the image pixmap
 */
@@ -113,6 +143,7 @@ void readimage(string infilename, bool backflag)
   if (!in)
   {
     cerr << "Cannot get the input image for " << infilename << ", error = " << geterror() << endl;
+    exit(0);
   }
   else
   {
@@ -155,7 +186,7 @@ void readimage(string infilename, bool backflag)
 
 
 /*
-write out the mask image
+write out the associated color image from image pixel map
 */
 void writeimage(string outfilename)
 {   
@@ -181,6 +212,9 @@ void writeimage(string outfilename)
 }
 
 
+/*
+display composed associated color image
+*/
 void display()
 {    
   // modify the pixmap: upside down the image and add A channel value for the image
@@ -207,18 +241,95 @@ void display()
 
 
 /*
-Keyboard Callback Routine: 'w' or 'W' write the pixmap to an image file, 'q', 'Q' or ESC quit
+Routine to get image from OpenGL framebuffer and then write the associated composed image to an image file
+*/
+void writeglimage()
+{   
+  // get the output file name
+  string outfile;
+  cout << "Enter output image filename: ";
+  cin >> outfile;
+  
+  int outchannels = 4;
+  if ((outfile.substr(outfile.find_last_of(".") + 1, outfile.length() - 1) == "ppm"))  {outchannels = 3;}
+
+  // get the current image from the OpenGL framebuffer and store in pixmap
+  int w = glutGet(GLUT_WINDOW_WIDTH);
+  int h = glutGet(GLUT_WINDOW_HEIGHT);
+  unsigned char glpixmap[w * h * outchannels];
+  if (outchannels == 4) {glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, glpixmap);}
+  else {glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, glpixmap);}
+
+  // set the image upside down
+  unsigned char writepixmap[w * h * outchannels];
+  int i, j, k; 
+  for (i = 0; i < w; i++)
+  {
+    for (j = 0; j < h; j++)
+    {   
+      for (k = 0; k < outchannels; k++)
+      {
+        writepixmap[(j * w + i) * outchannels + k] = glpixmap[((h - 1 - j) * w + i) * outchannels + k];
+      }
+    }
+  }
+
+  // create the subclass instance of ImageOutput which can write the right kind of file format
+  ImageOutput *out = ImageOutput::create(outfile);
+  if (!out)
+  {
+    cerr << "Could not create output image for " << outfilename << ", error = " << geterror() << endl;
+  }
+  else
+  {   
+    // open and prepare the image file
+    cout << "outchannels: " << outchannels << endl;
+    ImageSpec spec (w, h, outchannels, TypeDesc::UINT8);
+    out -> open(outfile, spec);
+    // write the entire image
+    out -> write_image(TypeDesc::UINT8, writepixmap);
+    cout << "Write the image pixmap to image file " << outfile << endl;
+    // close the file and free the ImageOutput I created
+    out -> close();
+    
+    delete out;
+  }
+}
+
+
+/*
+Keyboard Callback Routine: 'w' or 'W' write current window to an image file, 'r', 'R' move frontground image to right, 
+                           'l' or 'L' move frontground image to left, 'q', 'Q' or ESC quit
 This routine is called every time a key is pressed on the keyboard
 */
 void handleKey(unsigned char key, int x, int y)
 {
   switch(key)
   {
+    // write the current window to an image file
     case 'w':
     case 'W':
-      // writeimage();
+      writeglimage();
+      break;
+    
+    // frontground image move left
+    case 'l':
+    case 'L':
+      posX = (posX - 150) % (xres - front_w);
+      if (posX <= 0)  {posX = xres - front_w - posX;}
+      compose(frontpixmap, backpixmap, posX, posY);
+      glutPostRedisplay();
+      break;
+    
+    // frontground image move right
+    case 'r':
+    case 'R':
+      posX = (posX + 150) % (xres - front_w);
+      compose(frontpixmap, backpixmap, posX, posY);
+      glutPostRedisplay();
       break;
       
+    // quit the program
     case 'q':		// q - quit
     case 'Q':
     case 27:		// esc - quit
@@ -235,7 +346,6 @@ Reshape Callback Routine: sets up the viewport and drawing coordinates
 */
 void handleReshape(int w, int h)
 {
-  /*
   float factor = 1;
   // make the image scale down to the largest size when user decrease the size of window
   if (w < xres || h < yres)
@@ -248,7 +358,6 @@ void handleReshape(int w, int h)
   }
   // make the image remain centered in the window
   glViewport((w - xres * factor) / 2, (h - yres * factor) / 2, w, h);
-  */
   
   // define the drawing coordinate system on the viewport
   // to be measured in pixels
@@ -289,8 +398,15 @@ int main(int argc, char* argv[])
   readimage(frontimagename, 0);
   cout << "Read background image..." << endl;
   readimage(backimagename, 1);
+
+  // set frontground image position as middle
+  posX = float(xres - front_w) / 2;  
+  posY = yres - front_h;
+  // compose frountground image with background image
   cout << "Compose images..." << endl;
-  compose(frontpixmap, backpixmap, 0, 0);
+  compose(frontpixmap, backpixmap, posX, posY);
+
+  // write composed associated image
   if (argc > 3)
   {
     cout << "Write composed associated image..." << endl;
@@ -307,11 +423,11 @@ int main(int argc, char* argv[])
   // create the graphics window, giving width, height, and title text
   glutInitDisplayMode(GLUT_SINGLE | GLUT_RGBA);
   glutInitWindowSize(w, h);
-  glutCreateWindow("Green Screening Image");
+  glutCreateWindow("Composed Dr.House Image");
   
   // set up the callback routines to be called when glutMainLoop() detects an event
   glutDisplayFunc(display);	  // display callback
-  // glutKeyboardFunc(handleKey);	  // keyboard callback
+  glutKeyboardFunc(handleKey);	  // keyboard callback
   glutReshapeFunc(handleReshape); // window resize callback
   
   // Routine that loops forever looking for events. It calls the registered
@@ -320,6 +436,7 @@ int main(int argc, char* argv[])
 
   delete frontpixmap;
   delete backpixmap;
+  delete composedpixmap;
 
   return 0;
 }
