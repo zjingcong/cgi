@@ -201,7 +201,7 @@ int main(int argc, char* argv[])
   else
   {
     cout << "[Usage] alphamask <inputfilename> <outputfilename>" << endl;
-    cout << "Out put image file type should be PNG file." << endl;
+    cout << "Output image file type should be PNG file." << endl;
 
     return 0;
   }
