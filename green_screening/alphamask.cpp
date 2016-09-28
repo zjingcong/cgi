@@ -1,4 +1,11 @@
 /*
+Program to generate alpha channel mask for dhouse.png.
+It will convert RGB image to HSV image and set the alpha channel value according to H, S, V
+and write out the RGBA image to a PNG image file.
+
+Usage: alphamask <inputfilename> <outputfilename>
+User can modify hue, saturation, value thresholds in thresholds.txt file.
+
 Jingcong Zhang
 jingcoz@g.clemson.edu
 2016-09-26

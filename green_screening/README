@@ -1,0 +1,22 @@
+Green Screening Program
+------------------------------
+Name: Jingcong Zhang         |
+Email: jingcoz@g.clemson.edu |
+Date: 2016-09-27             |
+------------------------------
+This program is used to compose a green screening image with a background image.
+
+Run alphamask to generate alpha channel mask for input image file and write out the result to a PNG image file.
+  Usage: alphamask <inputfilename> <outputfilename>
+Run compose to compose the frontground image with background image.
+  Usage: compose <front_image_file> <back_image_file> (optional)<output_file_name>
+    The program will compose the frontground image and background image, 
+    display the associated composed image and optionally write out the associated composed image from the pixel map.
+    Frontground image default position is in the middle. 
+    User can simply modify the frontground image and write out the current window using key response.
+  Key Response:
+    r or R - move the frontground image to right
+    l or L - move the frontground image to left
+    w or W - write the current window to an image file
+    q or Q or ESC - exit the program
+
