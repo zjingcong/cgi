@@ -61,38 +61,61 @@ void readfilter(string filterfile)
 
 
 /*
+reflect image at borders
+*/
+int reflectBorder(int index, int total)
+{
+  int index_new;
+  index_new = index;  
+  if (index < 0)  {index_new = -index;}
+  if (index >= total) {index_new = 2 * (total - 1) - index;}
+
+  return index_new;
+}
+
+
+/*
 convolutional operation
 */
 void conv(unsigned char **in, unsigned char **out)
 {
   int n = (kernel_size - 1) / 2;
-  for (int row = 0; row < xres; row++)
+  for (int row = -n; row < xres - n; row++)
   {
-    for (int col = 0; col < yres; col++)
+    for (int col = -n; col < yres - n; col++)
     {
-      // non-edge area
-      if (row <= (xres - kernel_size) and col <= (yres - kernel_size))
+      double sum = 0;
+      // inside boundary
+      if (row <= (xres - kernel_size) and row >= 0 and col <= (yres - kernel_size) and col >= 0)
       {
-        double sum = 0;
         for (int i = 0; i < kernel_size; i++)
         {
-          for (int j = 0; j <= kernel_size; j++)
+          for (int j = 0; j < kernel_size; j++)
           {
             sum += kernel[i][j] * in[row + i][col + j];
           }
         }
-        out[row + n][col + n] = sum;
       }
-      // edge area
+      // boundary conditions: reflect image at borders
       else
       {
-        out[row][col] = 0;
+        for (int i = 0; i < kernel_size; i++)
+        {
+          for (int j = 0; j < kernel_size; j++)
+          {
+            sum += kernel[i][j] * in[reflectBorder(row + i, xres)][reflectBorder(col + j, yres)];
+          }
+        }
       }
+      out[row + n][col + n] = sum;
     }
   }
 }
 
 
+/*
+filter image for each channels
+*/
 void filterImage()
 {
   outputpixmap = new unsigned char [xres * yres * inputChannels];
@@ -305,6 +328,9 @@ int main(int argc, char* argv[])
   // Routine that loops forever looking for events. It calls the registered
   // callback routine to handle each event that is detected
   glutMainLoop();
+
+  delete [] inputpixmap;
+  delete [] outputpixmap;
 
   return 0;
 }
