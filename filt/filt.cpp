@@ -1,9 +1,10 @@
 # include <OpenImageIO/imageio.h>
-
+# include <stdlib.h>
 # include <cstdlib>
 # include <iostream>
 # include <fstream>
 # include <string>
+# include <algorithm>
 
 # ifdef __APPLE__
 #   pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -18,46 +19,10 @@ OIIO_NAMESPACE_USING
 
 static unsigned char *inputpixmap;   // input image pixel map
 static unsigned char *outputpixmap;   // output image pixel map
+static double **kernel;   // 2D-array to store convolutional kernel
 static int inputChannels;   // color channel number of input image
 static int xres, yres;   // window size: image width, image height
-static double **kernel;   // 2D-array to store convolutional kernel
 static int kernel_size;   // kernel size
-
-
-/*
-get filter kernel from filter file
-*/
-void readfilter(string filterfile)
-{
-  fstream filterFile(filterfile.c_str());
-  // get kernel size
-  int scale_factor;
-  filterFile >> kernel_size >> scale_factor;
-  // allocate memory for kernel 2D-array
-  kernel = new double *[kernel_size];
-  for (int i = 0; i < kernel_size; i++)
-  {
-    kernel[i] = new double [kernel_size];
-  }
-  // get kernel values
-  double sum = 0;
-  for (int row = 0; row < kernel_size; row++)
-  {
-    for (int col = 0; col < kernel_size; col++)
-    {
-      filterFile >> kernel[row][col];
-      sum += kernel[row][col];
-    }
-  }
-  // kernel normalization
-  for (int row = 0; row < kernel_size; row++)
-  {
-    for (int col = 0; col < kernel_size; col++)
-    {
-      kernel[row][col] = kernel[row][col] / sum;
-    }
-  }
-}
 
 
 /*
@@ -191,6 +156,69 @@ void readimage(string infilename)
 
 
 /*
+get filter kernel from filter file
+*/
+void readfilter(string filterfile)
+{
+  fstream filterFile(filterfile.c_str());
+  // get kernel size
+  int scale_factor;
+  filterFile >> kernel_size >> scale_factor;
+  // allocate memory for kernel 2D-array
+  kernel = new double *[kernel_size];
+  for (int i = 0; i < kernel_size; i++)
+  {
+    kernel[i] = new double [kernel_size];
+  }
+  // get kernel values
+  double sum = 0;
+  for (int row = 0; row < kernel_size; row++)
+  {
+    for (int col = 0; col < kernel_size; col++)
+    {
+      filterFile >> kernel[row][col];
+      sum += kernel[row][col];
+    }
+  }
+  // kernel normalization
+  for (int row = 0; row < kernel_size; row++)
+  {
+    for (int col = 0; col < kernel_size; col++)
+    {
+      kernel[row][col] = kernel[row][col] / sum;
+    }
+  }
+}
+
+
+/*
+write out the associated color image from image pixel map
+*/
+void writeimage(string outfilename, int channels)
+{   
+  // create the subclass instance of ImageOutput which can write the right kind of file format
+  ImageOutput *out = ImageOutput::create(outfilename);
+  if (!out)
+  {
+    cerr << "Could not create output image for " << outfilename << ", error = " << geterror() << endl;
+  }
+  else
+  {   
+    // open and prepare the image file
+    ImageSpec spec (xres, yres, channels, TypeDesc::UINT8);
+    out -> open(outfilename, spec);
+    // write the entire image
+    out -> write_image(TypeDesc::UINT8, outputpixmap);
+    cout << "Write the image pixmap to image file " << outfilename << endl;
+    // close the file and free the ImageOutput I created
+    out -> close();
+
+    delete out;
+  }
+}
+
+
+/*
 display composed associated color image
 */
 void display(const unsigned char *pixmap, int channels)
@@ -232,15 +260,16 @@ void display(const unsigned char *pixmap, int channels)
 }
 
 
-void displayInput()
-{
-  display(inputpixmap, inputChannels);
-}
+void displayInput() {display(inputpixmap, inputChannels);}
+void displayOutput()  {display(outputpixmap, inputChannels);}
 
 
-void displayOutput()
+/*
+mouse callback: left click any of the displayed windows to quit
+*/
+void mouseClick(int button, int state, int x, int y)
 {
-  display(outputpixmap, inputChannels);
+  if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {exit(0);}
 }
 
 
@@ -272,6 +301,64 @@ void handleReshape(int w, int h)
 
 
 /*
+command line option parser
+  MODE1 - filter the image via Gabor filter: filt <input_image_name> <output_image_name>(optional) -g theta sigma period
+  MODE2 - filter the image via filter from file: filt <input_image_name> <filter_name> <output_image_name>(optional)
+*/
+char **getIter(char** begin, char** end, const std::string& option) {return find(begin, end, option);}
+void getCmdOption(int argc, char **argv, string &inputImage, string &filter, string &outImage, double &theta, double &sigma, double &T, int &mode)
+{
+  if (argc < 3)
+  {
+    cout << "Help: " << endl;
+    cout << "Gabor Filter: " << endl;
+    cout << "[Usage] filt <input_image_name> <output_image_name>(optional) -g theta sigma period" << endl;
+    cout << "Filter File: " << endl;
+    cout << "[Usage] filt <input_image_name> <filter_name> <output_image_name>(optional)" << endl;
+    exit(0);
+  }
+  char **iter = getIter(argv, argv + argc, "-g");
+  // gabor mode
+  if (iter != argv + argc)
+  {
+    mode = 1;
+    cout << "Gabor Filter" << endl;
+    if (argc >= 6)
+    {
+      if (++iter != argv + argc)
+      {
+        theta = atof(iter[0]);
+        sigma = atof(iter[1]);
+        T = atof(iter[2]);
+        inputImage = argv[1];
+        cout << theta << " " << sigma << " " << T << endl;
+        if (argc == 7)  {outImage = argv[2];}
+      }
+      else  {cout << "Gabor Filter: " << endl << "[Usage] filt <input_image_name> -g theta sigma period" << endl; exit(0);}
+    }
+    else  {cout << "Gabor Filter: " << endl << "[Usage] filt <input_image_name> -g theta sigma period" << endl; exit(0);}
+  }
+  // normal mode
+  else
+  {
+    mode = 2;
+    cout << "Filter From File" << endl;
+    if (argc >= 3)
+    {
+      inputImage = argv[1];
+      filter = argv[2];
+      outImage = argv[3];
+    }
+    else
+    {
+      cout << "Filter File: " << endl << "[Usage] filt <input_image_name> <filter_name> <output_image_name>(optional)" << endl;
+      exit(0);
+    }
+  }
+}
+
+
+/*
 Main program
 */
 int main(int argc, char* argv[])
@@ -279,30 +366,21 @@ int main(int argc, char* argv[])
   string inputImage;    // input image file name
   string filter;    // filter file name
   string outImage;  // output image file name
+  double theta;
+  double sigma;
+  double T;
+  int mode = 0; // mode = 1: gabor filter, mode = 2: filter from file
 
-  // command line: get the filter, input image and output image optionally
-  // usage: filt <input_image_name> <filter_name> <output_image_name>(optional)
-  if (argc >= 3)
-  {
-    cout << "Input image file name: " << argv[1] << endl;
-    cout << "Filter file name: " << argv[2] << endl;
-    inputImage = argv[1];
-    filter = argv[2];
-    if (argc == 4)
-      {
-        cout << "Output image file name: " << argv[3] << endl;
-        outImage = argv[3];
-      }
-  }
-  else
-  {
-    cout << "[Usage] filt <input_image_name> <filter_name> <output_image_name>(optional)" << endl;
-    return 0;
-  }
+  // command line parser
+  getCmdOption(argc, argv, inputImage, filter, outImage, theta, sigma, T, mode);
 
   readimage(inputImage);
-  readfilter(filter);
-  filterImage();
+  if (mode == 2)
+  {
+    readfilter(filter);
+    filterImage();
+  }  
+  if (outImage != "") {writeimage(outImage, inputChannels);}
   
   // start up the glut utilities
   glutInit(&argc, argv);
@@ -316,6 +394,7 @@ int main(int argc, char* argv[])
   // set up the callback routines to be called when glutMainLoop() detects an event
   glutDisplayFunc(displayInput);	  // display callback
   // glutKeyboardFunc(handleKey);	  // keyboard callback
+  glutMouseFunc(mouseClick);  // mouse callback
   glutReshapeFunc(handleReshape); // window resize callback
 
   // second window: output image
@@ -323,6 +402,7 @@ int main(int argc, char* argv[])
   // set up the callback routines to be called when glutMainLoop() detects an event
   glutDisplayFunc(displayOutput);	  // display callback
   // glutKeyboardFunc(handleKey);	  // keyboard callback
+  glutMouseFunc(mouseClick);  // mouse callback
   glutReshapeFunc(handleReshape); // window resize callback
   
   // Routine that loops forever looking for events. It calls the registered
