@@ -5,6 +5,8 @@
 # include <fstream>
 # include <string>
 # include <algorithm>
+# include <math.h>
+# include <cmath>
 
 # ifdef __APPLE__
 #   pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -51,7 +53,7 @@ void conv(unsigned char **in, unsigned char **out)
     {
       double sum = 0;
       // inside boundary
-      if (row <= (xres - kernel_size) and row >= 0 and col <= (yres - kernel_size) and col >= 0)
+      if (row <= (yres - kernel_size) and row >= 0 and col <= (xres - kernel_size) and col >= 0)
       {
         for (int i = 0; i < kernel_size; i++)
         {
@@ -68,7 +70,7 @@ void conv(unsigned char **in, unsigned char **out)
         {
           for (int j = 0; j < kernel_size; j++)
           {
-            sum += kernel[i][j] * in[reflectBorder(row + i, xres)][reflectBorder(col + j, yres)];
+            sum += kernel[i][j] * in[reflectBorder(row + i, yres)][reflectBorder(col + j, xres)];
           }
         }
       }
@@ -95,19 +97,19 @@ void filterImage()
   // seperate channel values
   for (int channel = 0; channel < inputChannels; channel++)
   {
-    for (int row = 0; row < xres; row++)
+    for (int row = 0; row < yres; row++)
     {
-      for (int col = 0; col < yres; col++)
+      for (int col = 0; col < xres; col++)
       {
-        channel_value[row][col] = inputpixmap[(col * xres + row) * inputChannels + channel];
+        channel_value[row][col] = inputpixmap[(row * xres + col) * inputChannels + channel];
       }
     }
     conv(channel_value, out_value);
-    for (int row = 0; row < xres; row++)
+    for (int row = 0; row < yres; row++)
     {
-      for (int col = 0; col < yres; col++)
+      for (int col = 0; col < xres; col++)
       {
-        outputpixmap[(col * xres + row) * inputChannels + channel] = out_value[row][col];
+        outputpixmap[(row * yres + col) * inputChannels + channel] = out_value[row][col];
       }
     }
   }
@@ -123,36 +125,6 @@ void filterImage()
 }
 
 
-/*
-get the image pixmap
-*/
-void readimage(string infilename)
-{
-  // read the input image and store as a pixmap
-  ImageInput *in = ImageInput::open(infilename);
-  if (!in)
-  {
-    cerr << "Cannot get the input image for " << infilename << ", error = " << geterror() << endl;
-    exit(0);
-  }
-  else
-  {
-    // get the image size and channels information, allocate space for the image
-    const ImageSpec &spec = in -> spec();
-
-    xres = spec.width;
-    yres = spec.height;
-    inputChannels = spec.nchannels;
-
-    cout << "channels: " << inputChannels << endl;
-
-    inputpixmap = new unsigned char [xres * yres * inputChannels];
-    in -> read_image(TypeDesc::UINT8, inputpixmap);
-
-    in -> close();  // close the file
-    delete in;    // free ImageInput
-  }
-}
 
 
 /*
@@ -191,6 +163,63 @@ void readfilter(string filterfile)
 }
 
 
+void getGaborFilter(double theta, double sigma, double T)
+{
+  int kernel_center;
+  kernel_size = 4 * sigma + 1;  kernel_center = 2 * sigma;
+  // kernel_size = 2 * sigma;  kernel_center = 0;
+  kernel = new double *[kernel_size];
+  for (int i = 0; i < kernel_size; i++)  {kernel[i] = new double [kernel_size];}
+
+  for (int row = 0; row < kernel_size; row++)
+  {
+    for (int col = 0; col < kernel_size; col++)
+    {
+      int x, y, xx, yy;
+      // x = (col > kernel_center) ? (col - kernel_center) : (kernel_center - col);
+      // y = (row > kernel_center) ? (row - kernel_center) : (kernel_center - row);
+      x = col - kernel_center;
+      y = row - kernel_center;     
+      xx = x * cos(theta * M_PI / 180) + y * sin(theta * M_PI / 180);
+      yy = -x * sin(theta * M_PI / 180) + y * cos(theta * M_PI / 180);
+      kernel[row][col] = exp(-(pow(xx, 2.0) + pow(yy, 2.0)) / (2 * pow(sigma, 2.0))) * cos(2 * M_PI * xx / T);
+    }
+  }
+}
+
+
+/*
+get the image pixmap
+*/
+void readimage(string infilename)
+{
+  // read the input image and store as a pixmap
+  ImageInput *in = ImageInput::open(infilename);
+  if (!in)
+  {
+    cerr << "Cannot get the input image for " << infilename << ", error = " << geterror() << endl;
+    exit(0);
+  }
+  else
+  {
+    // get the image size and channels information, allocate space for the image
+    const ImageSpec &spec = in -> spec();
+
+    xres = spec.width;
+    yres = spec.height;
+    inputChannels = spec.nchannels;
+
+    cout << "channels: " << inputChannels << endl;
+
+    inputpixmap = new unsigned char [xres * yres * inputChannels];
+    in -> read_image(TypeDesc::UINT8, inputpixmap);
+
+    in -> close();  // close the file
+    delete in;    // free ImageInput
+  }
+}
+
+
 /*
 write out the associated color image from image pixel map
 */
@@ -221,19 +250,17 @@ void writeimage(string outfilename, int channels)
 /*
 display composed associated color image
 */
-void display(const unsigned char *pixmap, int channels)
+void display(const unsigned char *pixmap, int channels, int w, int h)
 {
   // modify the pixmap: upside down the image
-  // int n;
-  // n = (channels > 3) ? 3 : channels;
-  unsigned char displaypixmap[xres * yres * channels];
-  for (int i = 0; i < xres; i++)
+  unsigned char displaypixmap[w * h * channels];
+  for (int i = 0; i < w; i++) // col
   {
-    for (int j = 0; j < yres; j++)
+    for (int j = 0; j < h; j++) // row
     {   
       for (int k = 0; k < channels; k++)
       {
-        displaypixmap[(j * xres + i) * channels + k] = pixmap[((yres - 1 - j) * xres + i) * channels + k];
+        displaypixmap[(j * w + i) * channels + k] = pixmap[((h - 1 - j) * w + i) * channels + k];
       }
     }
   }
@@ -245,23 +272,21 @@ void display(const unsigned char *pixmap, int channels)
   switch (channels)
   {
     case 1:
-      glDrawPixels(xres, yres, GL_LUMINANCE, GL_UNSIGNED_BYTE, displaypixmap);
+      glDrawPixels(w, h, GL_LUMINANCE, GL_UNSIGNED_BYTE, displaypixmap);
       break;
     case 3:
-      glDrawPixels(xres, yres, GL_RGB, GL_UNSIGNED_BYTE, displaypixmap);
+      glDrawPixels(w, h, GL_RGB, GL_UNSIGNED_BYTE, displaypixmap);
       break;
     case 4:
-      glDrawPixels(xres, yres, GL_RGBA, GL_UNSIGNED_BYTE, displaypixmap);
+      glDrawPixels(w, h, GL_RGBA, GL_UNSIGNED_BYTE, displaypixmap);
     default:
       return;  
   }
 
   glFlush();
 }
-
-
-void displayInput() {display(inputpixmap, inputChannels);}
-void displayOutput()  {display(outputpixmap, inputChannels);}
+void displayInput() {display(inputpixmap, inputChannels, xres, yres);}
+void displayOutput()  {display(outputpixmap, inputChannels, xres, yres);}
 
 
 /*
@@ -347,7 +372,9 @@ void getCmdOption(int argc, char **argv, string &inputImage, string &filter, str
     {
       inputImage = argv[1];
       filter = argv[2];
-      outImage = argv[3];
+      cout << "Input Image: " << inputImage << endl;
+      cout << "Filter File: " << filter << endl;
+      if (argc == 4)  {outImage = argv[3];  cout << "Output Image: " << outImage << endl;}
     }
     else
     {
@@ -375,6 +402,20 @@ int main(int argc, char* argv[])
   getCmdOption(argc, argv, inputImage, filter, outImage, theta, sigma, T, mode);
 
   readimage(inputImage);
+  if (mode == 1)
+  {
+    getGaborFilter(theta, sigma, T);
+    cout << "K size: " << kernel_size << endl;
+    for (int i = 0; i < kernel_size; i++)
+    {
+      for (int j = 0; j < kernel_size; j++)
+      {
+        cout << int(255 * (kernel[i][j] + 1) / 2) << " ";
+      }
+      cout << endl;
+    }
+    filterImage();
+  }
   if (mode == 2)
   {
     readfilter(filter);
