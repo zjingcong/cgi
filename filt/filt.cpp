@@ -1,3 +1,21 @@
+/*
+OpenGL and GLUT program to filter an input image and optionally write out the image to an image file.
+Filter can be read from a filter file or generated from Gabor filter parameters.
+
+Usage: 
+- Filter an image from filter file  
+  filt <input_image_file> <filter_file> <output_image_file>(optional)
+- Filter an image by Gabor filter generated from parameters
+  filt <input_image_file> <output_image_file>(optional) -g <theta> <sigma> <period>
+
+Mouse Response:
+  Left click any of the displayed windows to quit the program.
+
+Jingcong Zhang
+jingcoz@g.clemson.edu
+2016-10-02
+*/
+
 # include <OpenImageIO/imageio.h>
 # include <stdlib.h>
 # include <cstdlib>
@@ -7,6 +25,7 @@
 # include <algorithm>
 # include <math.h>
 # include <cmath>
+#include <iomanip>
 
 # ifdef __APPLE__
 #   pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -44,12 +63,12 @@ int reflectBorder(int index, int total)
 /*
 convolutional operation
 */
-void conv(unsigned char **in, unsigned char **out)
+void conv(double **in, double **out)
 {
   int n = (kernel_size - 1) / 2;
-  for (int row = -n; row < xres - n; row++)
+  for (int row = -n; row < yres - n; row++)
   {
-    for (int col = -n; col < yres - n; col++)
+    for (int col = -n; col < xres - n; col++)
     {
       double sum = 0;
       // inside boundary
@@ -63,7 +82,8 @@ void conv(unsigned char **in, unsigned char **out)
           }
         }
       }
-      // boundary conditions: reflect image at borders
+      // boundary conditions
+      // reflect image at borders to add points for rows and cols outside the boundaries
       else
       {
         for (int i = 0; i < kernel_size; i++)
@@ -87,12 +107,12 @@ void filterImage()
 {
   outputpixmap = new unsigned char [xres * yres * inputChannels];
 
-  unsigned char **channel_value = new unsigned char *[xres];
-  unsigned char **out_value = new unsigned char *[xres];
+  double **channel_value = new double *[xres];
+  double **out_value = new double *[xres];
   for (int i = 0; i < yres; i++)
   {
-    channel_value[i] = new unsigned char [yres];
-    out_value[i] = new unsigned char [yres];
+    channel_value[i] = new double [yres];
+    out_value[i] = new double [yres];
   }
   // seperate channel values
   for (int channel = 0; channel < inputChannels; channel++)
@@ -101,7 +121,7 @@ void filterImage()
     {
       for (int col = 0; col < xres; col++)
       {
-        channel_value[row][col] = inputpixmap[(row * xres + col) * inputChannels + channel];
+        channel_value[row][col] = inputpixmap[(row * xres + col) * inputChannels + channel] / 255;  // store the channel value on scale 0-1
       }
     }
     conv(channel_value, out_value);
@@ -109,7 +129,8 @@ void filterImage()
     {
       for (int col = 0; col < xres; col++)
       {
-        outputpixmap[(row * yres + col) * inputChannels + channel] = out_value[row][col];
+        // scale the output value to 0-255
+        outputpixmap[(row * yres + col) * inputChannels + channel] = 255 * (out_value[row][col] + 1) / 2;
       }
     }
   }
@@ -125,8 +146,6 @@ void filterImage()
 }
 
 
-
-
 /*
 get filter kernel from filter file
 */
@@ -134,7 +153,7 @@ void readfilter(string filterfile)
 {
   fstream filterFile(filterfile.c_str());
   // get kernel size
-  int scale_factor;
+  double scale_factor;  // debug: scale_factor can't be int
   filterFile >> kernel_size >> scale_factor;
   // allocate memory for kernel 2D-array
   kernel = new double *[kernel_size];
@@ -143,47 +162,63 @@ void readfilter(string filterfile)
     kernel[i] = new double [kernel_size];
   }
   // get kernel values
-  double sum = 0;
+  double positive_sum = 0;
+  double negative_sum = 0;
+  cout << "Kernel Size: " << kernel_size << endl;
+  cout << "Kernel " << filterfile << ": " << endl;
   for (int row = 0; row < kernel_size; row++)
   {
     for (int col = 0; col < kernel_size; col++)
     {
       filterFile >> kernel[row][col];
-      sum += kernel[row][col];
+      cout << kernel[row][col] << " ";
+      if (kernel[row][col] > 0) {positive_sum += kernel[row][col];}
+      else  {negative_sum += (-kernel[row][col]);}
     }
+    cout << endl;
   }
   // kernel normalization
+  double scale = (positive_sum > negative_sum) ? positive_sum : negative_sum;
+  cout << "Scale Factor: " << scale << endl;
   for (int row = 0; row < kernel_size; row++)
   {
     for (int col = 0; col < kernel_size; col++)
     {
-      kernel[row][col] = kernel[row][col] / sum;
+      kernel[row][col] = kernel[row][col] / scale;
     }
   }
 }
 
 
+/*
+calculate gabor filter kernel with a kernel size n/m = 2 * sigma 
+*/
 void getGaborFilter(double theta, double sigma, double T)
 {
   int kernel_center;
-  kernel_size = 4 * sigma + 1;  kernel_center = 2 * sigma;
-  // kernel_size = 2 * sigma;  kernel_center = 0;
+  kernel_size = 4 * sigma + 1;
+  kernel_center = 2 * sigma;
   kernel = new double *[kernel_size];
   for (int i = 0; i < kernel_size; i++)  {kernel[i] = new double [kernel_size];}
-
+  
+  cout << "Kernel Size: " << kernel_size << endl;
+  cout << "Gabor Kernel: " << endl;
   for (int row = 0; row < kernel_size; row++)
   {
     for (int col = 0; col < kernel_size; col++)
     {
-      int x, y, xx, yy;
-      // x = (col > kernel_center) ? (col - kernel_center) : (kernel_center - col);
-      // y = (row > kernel_center) ? (row - kernel_center) : (kernel_center - row);
-      x = col - kernel_center;
-      y = row - kernel_center;     
+      double x, y, xx, yy;
+      // calculate the distance to kernel center
+      x = (col + 0.5) - kernel_center;
+      y = (row + 0.5) - kernel_center;
+   
       xx = x * cos(theta * M_PI / 180) + y * sin(theta * M_PI / 180);
       yy = -x * sin(theta * M_PI / 180) + y * cos(theta * M_PI / 180);
       kernel[row][col] = exp(-(pow(xx, 2.0) + pow(yy, 2.0)) / (2 * pow(sigma, 2.0))) * cos(2 * M_PI * xx / T);
+
+      cout << setprecision(2) << kernel[row][col] << " ";
     }
+    cout << endl;
   }
 }
 
@@ -356,7 +391,7 @@ void getCmdOption(int argc, char **argv, string &inputImage, string &filter, str
         sigma = atof(iter[1]);
         T = atof(iter[2]);
         inputImage = argv[1];
-        cout << theta << " " << sigma << " " << T << endl;
+        cout << "theta = " << theta << " sigma = " << sigma << " period = " << T << endl;
         if (argc == 7)  {outImage = argv[2];}
       }
       else  {cout << "Gabor Filter: " << endl << "[Usage] filt <input_image_name> -g theta sigma period" << endl; exit(0);}
@@ -405,15 +440,6 @@ int main(int argc, char* argv[])
   if (mode == 1)
   {
     getGaborFilter(theta, sigma, T);
-    cout << "K size: " << kernel_size << endl;
-    for (int i = 0; i < kernel_size; i++)
-    {
-      for (int j = 0; j < kernel_size; j++)
-      {
-        cout << int(255 * (kernel[i][j] + 1) / 2) << " ";
-      }
-      cout << endl;
-    }
     filterImage();
   }
   if (mode == 2)
@@ -450,8 +476,11 @@ int main(int argc, char* argv[])
   // callback routine to handle each event that is detected
   glutMainLoop();
 
+  // release memory
   delete [] inputpixmap;
   delete [] outputpixmap;
+  for (int i = 0; i < yres; i++)  {delete [] kernel[i];}
+  delete [] kernel;
 
   return 0;
 }
