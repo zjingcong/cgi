@@ -25,7 +25,7 @@ jingcoz@g.clemson.edu
 # include <algorithm>
 # include <math.h>
 # include <cmath>
-#include <iomanip>
+# include <iomanip>
 
 # ifdef __APPLE__
 #   pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -78,7 +78,7 @@ void conv(double **in, double **out)
         {
           for (int j = 0; j < kernel_size; j++)
           {
-            sum += kernel[i][j] * in[row + i][col + j];
+            sum += kernel[kernel_size - 1 - i][kernel_size - 1 - j] * in[row + i][col + j];
           }
         }
       }
@@ -90,7 +90,7 @@ void conv(double **in, double **out)
         {
           for (int j = 0; j < kernel_size; j++)
           {
-            sum += kernel[i][j] * in[reflectBorder(row + i, yres)][reflectBorder(col + j, xres)];
+            sum += kernel[kernel_size - 1 - i][kernel_size - 1 - j] * in[reflectBorder(row + i, yres)][reflectBorder(col + j, xres)];
           }
         }
       }
@@ -106,14 +106,16 @@ filter image for each channels
 void filterImage()
 {
   outputpixmap = new unsigned char [xres * yres * inputChannels];
-
-  double **channel_value = new double *[xres];
-  double **out_value = new double *[xres];
-  for (int i = 0; i < yres; i++)
+  
+  int m = (xres > yres) ? xres : yres;
+  double **channel_value = new double *[m];
+  double **out_value = new double *[m];
+  for (int i = 0; i < m; i++)  
   {
-    channel_value[i] = new double [yres];
-    out_value[i] = new double [yres];
+    channel_value[i] = new double [m];
+    out_value[i] = new double [m];
   }
+
   // seperate channel values
   for (int channel = 0; channel < inputChannels; channel++)
   {
@@ -121,7 +123,8 @@ void filterImage()
     {
       for (int col = 0; col < xres; col++)
       {
-        channel_value[row][col] = inputpixmap[(row * xres + col) * inputChannels + channel] / 255;  // store the channel value on scale 0-1
+        // store the channel value on scale 0-1
+        channel_value[row][col] = float(inputpixmap[(row * xres + col) * inputChannels + channel]) / 255;
       }
     }
     conv(channel_value, out_value);
@@ -129,18 +132,14 @@ void filterImage()
     {
       for (int col = 0; col < xres; col++)
       {
-        // scale the output value to 0-255
-        outputpixmap[(row * yres + col) * inputChannels + channel] = 255 * (out_value[row][col] + 1) / 2;
+        // scale the output value to 0-255: 255 times the absolute value
+        outputpixmap[(row * xres + col) * inputChannels + channel] = 255 * abs(out_value[row][col]);
       }
     }
   }
   
   // release memory
-  for (int i = 0; i < yres; i++)
-  {
-    delete [] channel_value[i];
-    delete [] out_value[i];
-  }
+  for (int i = 0; i < m; i++)  {delete [] channel_value[i];  delete [] out_value[i];}
   delete [] channel_value;
   delete [] out_value;
 }
@@ -203,22 +202,37 @@ void getGaborFilter(double theta, double sigma, double T)
   
   cout << "Kernel Size: " << kernel_size << endl;
   cout << "Gabor Kernel: " << endl;
+  double positive_sum = 0;
+  double negative_sum = 0;
   for (int row = 0; row < kernel_size; row++)
   {
     for (int col = 0; col < kernel_size; col++)
     {
       double x, y, xx, yy;
       // calculate the distance to kernel center
-      x = (col + 0.5) - kernel_center;
-      y = (row + 0.5) - kernel_center;
+      x = (col > 0) ? ((col + 0.5) - kernel_center) : ((col - 0.5) - kernel_center);
+      y = (row > 0) ? ((row + 0.5) - kernel_center) : ((row - 0.5) - kernel_center);
    
       xx = x * cos(theta * M_PI / 180) + y * sin(theta * M_PI / 180);
       yy = -x * sin(theta * M_PI / 180) + y * cos(theta * M_PI / 180);
       kernel[row][col] = exp(-(pow(xx, 2.0) + pow(yy, 2.0)) / (2 * pow(sigma, 2.0))) * cos(2 * M_PI * xx / T);
 
+      if (kernel[row][col] > 0) {positive_sum += kernel[row][col];}
+      else  {negative_sum += (-kernel[row][col]);}
+
       cout << setprecision(2) << kernel[row][col] << " ";
     }
     cout << endl;
+  }
+
+  double scale = (positive_sum > negative_sum) ? positive_sum : negative_sum;
+  cout << "Scale Factor: " << scale << endl;
+  for (int row = 0; row < kernel_size; row++)
+  {
+    for (int col = 0; col < kernel_size; col++)
+    {
+      kernel[row][col] = kernel[row][col] / scale;
+    }
   }
 }
 
@@ -243,6 +257,7 @@ void readimage(string infilename)
     xres = spec.width;
     yres = spec.height;
     inputChannels = spec.nchannels;
+    cout << "Image Size: " << xres << "X" << yres << endl;
 
     cout << "channels: " << inputChannels << endl;
 
@@ -381,7 +396,7 @@ void getCmdOption(int argc, char **argv, string &inputImage, string &filter, str
   // gabor mode
   if (iter != argv + argc)
   {
-    mode = 1;
+    mode = 1; // mode 1: gabor filter mode
     cout << "Gabor Filter" << endl;
     if (argc >= 6)
     {
@@ -428,27 +443,31 @@ int main(int argc, char* argv[])
   string inputImage;    // input image file name
   string filter;    // filter file name
   string outImage;  // output image file name
-  double theta;
-  double sigma;
-  double T;
+  double theta;   // gabor filter parameter: theta
+  double sigma;   // gabor filter parameter: sigma
+  double T;       // gabor filter parameter: period
   int mode = 0; // mode = 1: gabor filter, mode = 2: filter from file
 
   // command line parser
   getCmdOption(argc, argv, inputImage, filter, outImage, theta, sigma, T, mode);
-
+  
+  // read input image
   readimage(inputImage);
+  // filter image
   if (mode == 1)
   {
-    getGaborFilter(theta, sigma, T);
+    getGaborFilter(theta, sigma, T);    
     filterImage();
   }
   if (mode == 2)
   {
     readfilter(filter);
     filterImage();
-  }  
+  }
+  // write out to an output image file
   if (outImage != "") {writeimage(outImage, inputChannels);}
   
+  // display input image and output image in seperated windows
   // start up the glut utilities
   glutInit(&argc, argv);
   
@@ -460,7 +479,6 @@ int main(int argc, char* argv[])
   glutCreateWindow("Input Image");  
   // set up the callback routines to be called when glutMainLoop() detects an event
   glutDisplayFunc(displayInput);	  // display callback
-  // glutKeyboardFunc(handleKey);	  // keyboard callback
   glutMouseFunc(mouseClick);  // mouse callback
   glutReshapeFunc(handleReshape); // window resize callback
 
@@ -468,7 +486,6 @@ int main(int argc, char* argv[])
   glutCreateWindow("Output Image");  
   // set up the callback routines to be called when glutMainLoop() detects an event
   glutDisplayFunc(displayOutput);	  // display callback
-  // glutKeyboardFunc(handleKey);	  // keyboard callback
   glutMouseFunc(mouseClick);  // mouse callback
   glutReshapeFunc(handleReshape); // window resize callback
   
@@ -479,7 +496,7 @@ int main(int argc, char* argv[])
   // release memory
   delete [] inputpixmap;
   delete [] outputpixmap;
-  for (int i = 0; i < yres; i++)  {delete [] kernel[i];}
+  for (int i = 0; i < kernel_size; i++)  {delete [] kernel[i];}
   delete [] kernel;
 
   return 0;

@@ -1,0 +1,19 @@
+filt program
+------------------------------
+Name: Jingcong Zhang         |
+Email: jingcoz@g.clemson.edu |
+Date: 2016-10-04             |
+------------------------------
+This program is used to filter an input image from a convolutional kernel read from a filter file
+or a gabor filter kernel generated from parameters theta, sigma and period, 
+and then optionally write out to an image file.
+
+Usage: 
+- Filter an image from a filter file and optionally write out to an image file
+  filt <input_image_file> <filter_file> <output_image_file>(optional)
+- Filter an image by Gabor filter generated from parameters and optionally write out to an image file
+  filt <input_image_file> <output_image_file>(optional) -g <theta> <sigma> <period>
+
+Mouse Response:
+  Left click any of the displayed windows to quit the program.
+

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h1 style="font-family:Arial;text-align:center;"><b>Spatial Convolution Results</b></h1>
+<p style="font-family:courier,Arial;text-align:center;">Jingcong Zhang</p>
+<p style="font-family:courier,Arial;text-align:center;">2016-10-04</p>
+
+<hr style="font-family: Helvetica,Arial,sans-serif;">
+<h3 style="font-family:Arial;text-align:center;"><b>Basic Requirements</b></h3>
+
+<p style="font-family:courier,monospace"><b>squares.png</b></p>
+<p style="font-family:courier,monospace">pulse.filt: </p>
+<img src="squares_pulse.png">
+<p style="font-family:courier,monospace">tent.filt: </p>
+<img src="squares_tent.png">
+<p style="font-family:courier,monospace">hp.filt: It can detect the edges.</p>
+<img src="squares_hp.png">
+<p style="font-family:courier,monospace">sobol-horiz.filt: It can detect horizonal edges.</p>
+<img src="squares_sobol-horiz.png">
+<p style="font-family:courier,monospace">sobol-vert.filt: It can detect vertical edges.</p>
+<img src="squares_sobol-vert.png">
+
+<p style="font-family:courier,monospace"><b>brushes.png</b></p>
+<p style="font-family:courier,monospace">pulse.filt: </p>
+<img src="brushes_pulse.png">
+<p style="font-family:courier,monospace">tent.filt: </p>
+<img src="brushes_tent.png">
+<p style="font-family:courier,monospace">hp.filt: </p>
+<img src="brushes_hp.png">
+<p style="font-family:courier,monospace">sobol-horiz.filt: </p>
+<img src="brushes_sobol-horiz.png">
+<p style="font-family:courier,monospace">sobol-vert.filt: </p>
+<img src="brushes_sobol-vert.png">
+<hr style="font-family: Helvetica,Arial,sans-serif;">
+
+<p style="font-family:courier,monospace"><b>Filters: <br></p>
+<p style="font-family:courier,monospace"><b>emboss.filt: To make the image like an embossment.<br></p>
+<p style="font-family:courier,monospace">
+<b>6 15<br>
+<b>-1 -1 -1 -1 0<br>
+<b>-1 -1 -1  0 1<br>
+<b>-1 -1  0  1 1<br>
+<b>-1  0  1  1 1<br>
+<b> 0  1  1  1 1<br>
+</p>
+<img src="brushes_emboss.png">
+<p style="font-family:courier,monospace"><b>gaussian.filt: To blur the image.<br></p>
+<p style="font-family:courier,monospace">
+<b>6 13<br>
+<b>1 2 1<br>
+<b>2 4 2<br>
+<b>1 2 1<br>
+</p>
+<img src="brushes_gaussian.png">
+
+
+<hr style="font-family: Helvetica,Arial,sans-serif;">
+<h3 style="font-family:Arial;text-align:center;"><b>Advanced Extension: Gabor Filter</b></h3>
+<p style="font-family:courier,monospace"><b>sines.png</b></p>
+<p style="font-family:courier,monospace">Theta = 0, sigma = 4, period = 4</p>
+<img src="sines_0_4_4.png">
+<p style="font-family:courier,monospace">Theta = 0, sigma = 4, period = 8</p>
+<img src="sines_0_4_8.png">
+<p style="font-family:courier,monospace">Theta = 45, sigma = 4, period = 4</p>
+<img src="sines_45_4_4.png">
+<p style="font-family:courier,monospace">Theta = 45, sigma = 4, period = 8</p>
+<img src="sines_45_4_8.png">
+
+</body>
+</html>
