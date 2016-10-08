@@ -42,7 +42,7 @@ static int xres, yres;  // input image size: width, height
 static int xres_out, yres_out;  // output image size: width, height
 
 
-void wrapimage()
+void wrapimage(int nrows, int ncols)
 {
   // tiled image keep the same size as original image
   xres_out = xres;
@@ -63,9 +63,12 @@ void wrapimage()
       x = (float(col_out) + 0.5) / float(xres_out);
       y = (float(row_out) + 0.5) / float(yres_out);
 
-      // wrap function
-      u = pow(x, 0.25);
-      v = pow((sin(M_PI * y / 2)), 2.0);
+      // wrap function: tile the original image
+      int i, j;
+      j = x * ncols;
+      u = (x - (j / float(ncols))) * ncols;
+      i = y * nrows;
+      v = (y - (i / float(nrows))) * nrows;
       
       int row_in, col_in;
       row_in = floor(v * yres); // yres = H_input
@@ -251,7 +254,7 @@ void handleReshape(int w, int h)
 command line options parser
   tile row_number col_number input_image_name [output_image_name](optional).
 */
-void getCmdOptions(int argc, char* argv[], int nrows, int ncols, string &inputImage, string &outputImage)
+void getCmdOptions(int argc, char* argv[], int &nrows, int &ncols, string &inputImage, string &outputImage)
 {
   if (argc >= 4)
   {
@@ -259,6 +262,7 @@ void getCmdOptions(int argc, char* argv[], int nrows, int ncols, string &inputIm
     ncols = atoi(argv[2]);
     inputImage = argv[3];
     if (argc > 4) {outputImage = argv[4];}
+    cout << "Repetitions - row_number: " << nrows << "  col_number: " << ncols << endl;
   }
   // print help message
   else  
@@ -277,14 +281,15 @@ int main(int argc, char* argv[])
 {
   string inputImage;  // input image file name
   string outputImage; // output image file name
+  int nrows, ncols;   // number of horizontal and vertical repetitions
 
   // command line parser
-  getCmdOptions(argc, argv, inputImage, outputImage);
+  getCmdOptions(argc, argv, nrows, ncols, inputImage, outputImage);
   
   // read input image
   readimage(inputImage);
   // wrap the original image
-  wrapimage();
+  wrapimage(nrows, ncols);
   // write out to an output image file
   if (outputImage != "") {writeimage(outputImage);}
   
