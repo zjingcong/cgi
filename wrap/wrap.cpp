@@ -1,5 +1,7 @@
 /*
-OpenGL and GLUT program to wrap an input image and optionally write out the image to an image file.
+OpenGL and GLUT program to wrap an input image, display original ans wrapped image, and optionally write out the image to an image file.
+
+It firstly read an image pixel map and convert it to RGBA image.
 
 Usage: 
 wrap input_image_name [output_image_name]
@@ -36,14 +38,42 @@ OIIO_NAMESPACE_USING
 
 static unsigned char *inputpixmap;  // input image pixels pixmap
 static unsigned char *outputpixmap; // output image pixels pixmap
-static int xres, yres;  // window size: width, height
-static int channels;  // input image channels
+static int xres, yres;  // input image size: width, height
+static int xres_out, yres_out;  // output image size: width, height
 
 
 void wrapimage()
 {
-  // outputpixmap = new unsigned char [xres * yres * channels];
-  // for (int i; i < xres * yres * channels; i++) {outputpixmap[i] = inputpixmap[i];}
+  xres_out = xres;
+  yres_out = yres;
+
+  // allocate memory for output pixmap: output image is 4 channels
+  outputpixmap = new unsigned char [xres_out * yres_out * 4];
+  // fill the output image with a clear transparent color(0, 0, 0, 0)
+  for (int i = 0; i < xres_out * yres_out * 4; i++) {outputpixmap[i] = 0;} 
+
+  // inverse map
+  double x, y, u, v;
+  for (int row_out = 0; row_out < yres_out; row_out++)  // output row
+  {
+    for (int col_out = 0; col_out < xres_out; col_out++)  // output col
+    {
+      // coordinate normalization
+      x = (float(col_out) + 0.5) / float(xres_out);
+      y = (float(row_out) + 0.5) / float(yres_out);
+
+      // wrap function
+      u = pow(x, 0.25);
+      v = pow((sin(M_PI * y / 2)), 2.0);
+      
+      int row_in, col_in;
+      row_in = floor(v * yres); // yres = H_input
+      col_in = floor(u * xres); // xres = W_input
+      
+      for (int k = 0; k < 4; k++)
+      {outputpixmap[(row_out * xres_out + col_out) * 4 + k] = inputpixmap[(row_in * xres + col_in) * 4 + k];}
+    }
+  }
 }
 
 
@@ -66,13 +96,41 @@ void readimage(string infilename)
 
     xres = spec.width;
     yres = spec.height;
-    channels = spec.nchannels;
-
-    cout << "Image Size: " << xres << "X" << yres << endl;
+    int channels = spec.nchannels;
+    cout << "Image Size: " << xres << "x" << yres << endl;
     cout << "channels: " << channels << endl;
 
-    inputpixmap = new unsigned char [xres * yres * channels];
-    in -> read_image(TypeDesc::UINT8, inputpixmap);
+    unsigned char tmppixmap[xres * yres * channels];
+    in -> read_image(TypeDesc::UINT8, tmppixmap);
+
+    // convert input image to RGBA image
+    inputpixmap = new unsigned char [xres * yres * 4];  // input image pixel map is 4 channels
+    for (int row = 0; row < yres; row++)
+    {
+      for (int col = 0; col < xres; col++)
+      {
+        switch (channels)
+        {
+          case 1:
+            inputpixmap[(row * xres + col) * 4] = tmppixmap[row * xres + col];
+            inputpixmap[(row * xres + col) * 4 + 1] = inputpixmap[(row * xres + col) * 4];
+            inputpixmap[(row * xres + col) * 4 + 2] = inputpixmap[(row * xres + col) * 4];
+            inputpixmap[(row * xres + col) * 4 + 3] = 255;
+            break;
+          case 3:
+            for (int k = 0; k < 3; k++)
+            {inputpixmap[(row * xres + col) * 4 + k] = tmppixmap[(row * xres + col) * 3 + k];}
+            inputpixmap[(row * xres + col) * 4 + 3] = 255;
+            break;
+          case 4:
+            for (int k = 0; k < 4; k++)
+            {inputpixmap[(row * xres + col) * 4 + k] = tmppixmap[(row * xres + col) * 4 + k];}
+            break;
+          default:
+            return;
+        }
+      }
+    }
 
     in -> close();  // close the file
     delete in;    // free ImageInput
@@ -94,14 +152,31 @@ void writeimage(string outfilename)
   else
   {   
     // open and prepare the image file
-    ImageSpec spec (xres, yres, channels, TypeDesc::UINT8);
+    ImageSpec spec (xres_out, yres_out, 4, TypeDesc::UINT8);
     out -> open(outfilename, spec);
     // write the entire image
     out -> write_image(TypeDesc::UINT8, outputpixmap);
+
+    // .ppm file: 3 channels
+    if (outfilename.substr(outfilename.find_last_of(".") + 1, outfilename.length() - 1) == "ppm")
+    {
+      unsigned char pixmap[xres_out * yres_out * 3];
+      for (int row = 0; row < yres_out; row++)
+      {
+        for (int col = 0; col < xres_out; col++)
+        {
+          for (int k = 0; k < 3; k++)
+          {pixmap[(row * xres_out + col) * 3 + k] = outputpixmap[(row * xres_out + col) * 4 + k];}
+        }
+      }
+      ImageSpec spec (xres_out, yres_out, 3, TypeDesc::UINT8);
+      out -> open(outfilename, spec);
+      out -> write_image(TypeDesc::UINT8, pixmap);
+    }
+
     cout << "Write the wraped image to image file " << outfilename << endl;
     // close the file and free the ImageOutput I created
     out -> close();
-
     delete out;
   }
 }
@@ -110,34 +185,16 @@ void writeimage(string outfilename)
 /*
 display composed associated color image
 */
-void display(const unsigned char *pixmap)
+void display(const unsigned char *pixmap, int w, int h)
 {
-  unsigned char displaypixmap[xres * yres * 4];
-  // modify the pixmap: upside down the image and set the display channel number to 4 
-  for (int row = 0; row < yres; row++)
+  unsigned char displaypixmap[w * h * 4];
+  // modify the pixmap: upside down the image
+  for (int row = 0; row < h; row++)
   {
-    for (int col = 0; col < xres; col++)
+    for (int col = 0; col < w; col++)
     {
-      switch (channels)
-      {
-        case 1:
-          displaypixmap[(row * xres + col) * 4] = pixmap[(yres - 1 - row) * xres + col];
-          displaypixmap[(row * xres + col) * 4 + 1] = displaypixmap[(row * xres + col) * 4];
-          displaypixmap[(row * xres + col) * 4 + 2] = displaypixmap[(row * xres + col) * 4];
-          displaypixmap[(row * xres + col) * 4 + 3] = 255;
-          break;
-        case 3:
-          for (int k = 0; k < 3; k++)
-          {displaypixmap[(row * xres + col) * 4 + k] = pixmap[((yres - 1 - row) * xres + col) * 3 + k];}
-          displaypixmap[(row * xres + col) * 4 + 3] = 255;
-          break;
-        case 4:
-          for (int k = 0; k < 4; k++)
-          {displaypixmap[(row * xres + col) * 4 + k] = pixmap[((yres - 1 - row) * xres + col) * 4 + k];}
-          break;
-        default:
-          return;
-      }
+      for (int k = 0; k < 4; k++)
+      {displaypixmap[(row * w + col) * 4 + k] = pixmap[((h - 1 - row) * w + col) * 4 + k];}
     }
   }
 
@@ -145,12 +202,12 @@ void display(const unsigned char *pixmap)
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glRasterPos2i(0, 0);
   // glDrawPixels writes a block of pixels to the framebuffer
-  glDrawPixels(xres, yres, GL_RGBA, GL_UNSIGNED_BYTE, displaypixmap);
+  glDrawPixels(w, h, GL_RGBA, GL_UNSIGNED_BYTE, displaypixmap);
 
   glFlush();
 }
-void displayInput() {display(inputpixmap);}
-void displayOutput()  {display(outputpixmap);}
+void displayInput() {display(inputpixmap, xres, yres);}
+void displayOutput()  {display(outputpixmap, xres_out, yres_out);}
 
 
 /*
@@ -234,7 +291,9 @@ int main(int argc, char* argv[])
   
   // create the graphics window, giving width, height, and title text
   glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-  glutInitWindowSize(xres, yres);
+  int width = (xres > xres_out) ? xres : xres_out;
+  int height = (yres > yres_out) ? yres : yres_out;
+  glutInitWindowSize(width, height);
 
   // first window: input image
   glutCreateWindow("Input Image");  
@@ -253,6 +312,10 @@ int main(int argc, char* argv[])
   // Routine that loops forever looking for events. It calls the registered
   // callback routine to handle each event that is detected
   glutMainLoop();
+
+  // release memory
+  delete [] inputpixmap;
+  delete [] outputpixmap;
 
   return 0;
 }
