@@ -44,8 +44,8 @@ static int xres_out, yres_out;  // output image size: width, height
 
 void wrapimage()
 {
-  xres_out = xres;
-  yres_out = yres;
+  xres_out = xres * pow(2.0, 0.5);
+  yres_out = yres * pow(2.0, 0.5);
 
   // allocate memory for output pixmap: output image is 4 channels
   outputpixmap = new unsigned char [xres_out * yres_out * 4];
@@ -62,16 +62,25 @@ void wrapimage()
       x = (float(col_out) + 0.5) / float(xres_out);
       y = (float(row_out) + 0.5) / float(yres_out);
 
-      // wrap function
-      u = pow(x, 0.25);
-      v = pow((sin(M_PI * y / 2)), 2.0);
-      
-      int row_in, col_in;
-      row_in = floor(v * yres); // yres = H_input
-      col_in = floor(u * xres); // xres = W_input
-      
-      for (int k = 0; k < 4; k++)
-      {outputpixmap[(row_out * xres_out + col_out) * 4 + k] = inputpixmap[(row_in * xres + col_in) * 4 + k];}
+      // wrap fuction 1
+      // u = pow(x, 0.25);
+      // v = pow((sin(M_PI * y / 2)), 2.0);
+
+      // wrap fuction 2: twirl image
+      double r = pow((pow((x - 0.5) * 2, 2.0) + pow((y - 0.5) * 2, 2.0)), 0.5);
+      double a = atan2((y - 0.5) * 2, (x - 0.5) * 2);
+      u = pow(2.0, 0.5) * (r * cos(a + 1 * r)) / 2 + 0.5;
+      v = pow(2.0, 0.5) * (r * sin(a + 1 * r)) / 2 + 0.5;
+
+      if (u <= 1 && v <= 1 && u >= 0 && v >= 0)
+      {
+        int row_in, col_in;
+        row_in = floor(v * yres); // yres = H_input
+        col_in = floor(u * xres); // xres = W_input
+        
+        for (int k = 0; k < 4; k++)
+        {outputpixmap[(row_out * xres_out + col_out) * 4 + k] = inputpixmap[(row_in * xres + col_in) * 4 + k];}
+      }
     }
   }
 }
@@ -97,7 +106,7 @@ void readimage(string infilename)
     xres = spec.width;
     yres = spec.height;
     int channels = spec.nchannels;
-    cout << "Image Size: " << xres << "x" << yres << endl;
+    cout << "Input image size: " << xres << "x" << yres << endl;
     cout << "channels: " << channels << endl;
 
     unsigned char tmppixmap[xres * yres * channels];
@@ -222,7 +231,7 @@ void mouseClick(int button, int state, int x, int y)
 /*
 Reshape Callback Routine: sets up the viewport and drawing coordinates
 */
-void handleReshape(int w, int h)
+void handleReshape(int w, int h, int img_width, int img_height)
 {
   float factor = 1;
   // make the image scale down to the largest size when user decrease the size of window
@@ -235,7 +244,7 @@ void handleReshape(int w, int h)
     glPixelZoom(factor, factor);
   }
   // make the image remain centered in the window
-  glViewport((w - xres * factor) / 2, (h - yres * factor) / 2, w, h);
+  glViewport((w - img_width * factor) / 2, (h - img_height * factor) / 2, w, h);
   
   // define the drawing coordinate system on the viewport
   // to be measured in pixels
@@ -244,6 +253,9 @@ void handleReshape(int w, int h)
   gluOrtho2D(0, w, 0, h);
   glMatrixMode(GL_MODELVIEW);
 }
+// handleReshape_in for input window, handleReshape_out for output window: input image size may be different from output image size
+void handleReshape_in(int w, int h) {handleReshape(w, h, xres, yres);}
+void handleReshape_out(int w, int h)  {handleReshape(w, h, xres_out, yres_out);}
 
 
 /*
@@ -300,14 +312,14 @@ int main(int argc, char* argv[])
   // set up the callback routines to be called when glutMainLoop() detects an event
   glutDisplayFunc(displayInput);	  // display callback
   glutMouseFunc(mouseClick);  // mouse callback
-  glutReshapeFunc(handleReshape); // window resize callback
+  glutReshapeFunc(handleReshape_in); // window resize callback
 
   // second window: output image
   glutCreateWindow("Output Image");  
   // set up the callback routines to be called when glutMainLoop() detects an event
   glutDisplayFunc(displayOutput);	  // display callback
   glutMouseFunc(mouseClick);  // mouse callback
-  glutReshapeFunc(handleReshape); // window resize callback
+  glutReshapeFunc(handleReshape_out); // window resize callback
   
   // Routine that loops forever looking for events. It calls the registered
   // callback routine to handle each event that is detected
