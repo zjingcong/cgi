@@ -42,7 +42,10 @@ static int xres, yres;  // input image size: width, height
 static int xres_out, yres_out;  // output image size: width, height
 
 
-void wrapimage(int nrows, int ncols)
+/*
+tile original image to create the same size tiled image
+*/
+void tileimage(int nrows, int ncols)
 {
   // tiled image keep the same size as original image
   xres_out = xres;
@@ -295,7 +298,7 @@ int main(int argc, char* argv[])
   // read input image
   readimage(inputImage);
   // wrap the original image
-  wrapimage(nrows, ncols);
+  tileimage(nrows, ncols);
   // write out to an output image file
   if (outputImage != "") {writeimage(outputImage);}
   
@@ -317,7 +320,7 @@ int main(int argc, char* argv[])
   glutReshapeFunc(handleReshape_in); // window resize callback
 
   // second window: output image
-  glutCreateWindow("Output Image");  
+  glutCreateWindow("Tiled Image");  
   // set up the callback routines to be called when glutMainLoop() detects an event
   glutDisplayFunc(displayOutput);	  // display callback
   glutMouseFunc(mouseClick);  // mouse callback
