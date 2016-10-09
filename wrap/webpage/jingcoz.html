@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h1 style="font-family:Arial;text-align:center;"><b>General Wrap Results</b></h1>
+<p style="font-family:courier,Arial;text-align:center;">Jingcong Zhang</p>
+<p style="font-family:courier,Arial;text-align:center;">2016-10-09</p>
+
+<hr style="font-family: Helvetica,Arial,sans-serif;">
+<h2 style="font-family:Arial;text-align:center;"><b>Basic Requirements</b></h2>
+<h4 style="font-family:Arial;text-align:left;"><b>Wrap Function 1: magnify right side and minify left side</b></h4>
+<div align="center">
+<table border="0" cellpadding="5" cellspacing="5" width="25%" style="font-family:courier,monospace;">
+  <tbody>
+    <tr>
+      <td valign="top" align="left">
+        <b>x = u^4<br>
+        <b>y = 2/pi * asin(sqrt(v))<br>
+    </tr>
+    <tr>
+      <td valign="top" align="left">
+        <b>u = pow(x, 0.25)<br>
+        <b>v = (sin(pi/2 * y))^2<br>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<table border="0" cellpadding="2" cellspacing="2" width="100%" style="font-family:courier,monospace;">
+  <tbody>
+    <tr>
+      <td valign="top" align="center"><img src="Piet_Mondrian_2.jpg" width="256" height="260">
+        <br>
+        <br>
+        Original Image 1<br>
+      </td>
+      <td valign="top" align="center"><img src="Piet_Mondrian_2_stretch.png" width="256" height="260">
+        <br>
+        <br>
+        Wrapped Image 1<br>
+      </td>
+      <td valign="top" align="center"><img src="rays.png" width="256" height="256">
+        <br>
+        <br>
+        Original Image 2<br>
+      </td>
+      <td valign="top" align="center"><img src="rays_stretch.png" width="256" height="256">
+        <br>
+        <br>
+        Wrapped Image 2<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 style="font-family:Arial;text-align:left;"><b>Wrap Function 2: twirl image</b></h4>
+<div align="center">
+<table border="0" cellpadding="5" cellspacing="5" width="25%" style="font-family:courier,monospace;">
+  <tbody>
+    <tr>
+      <td valign="top" align="left">
+        <b>r = sqrt((2*u-1)^2+(2*v-1)^2)<br>
+        <b>theta = atan2(2*v-1, 2*u-1)<br>
+        <b>x = r*cos(theta-k*r)/2+0.5<br>
+        <b>y = r*sin(theta-k*r)/2+0.5<br>
+    </tr>
+    <tr>
+      <td valign="top" align="left">
+        <b>r = sqrt((2*x-1)^2+(2*y-1)^2)<br>
+        <b>theta = atan2(2*y-1, 2*x-1)<br>
+        <b>u = r*cos(theta+k*r)/2+0.5<br>
+        <b>v = r*sin(theta+k*r)/2+0.5<br>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<table border="0" cellpadding="5" cellspacing="5" width="100%" style="font-family:courier,monospace;">
+  <tbody>
+    <tr>
+      <td valign="top" align="center"><img src="Piet_Mondrian_1.jpg"  width="256" height="271">
+        <br>
+        <br>
+        Original Image<br>
+      </td>
+      <td valign="top" align="center"><img src="Piet_Mondrian_1_twirl_1.png" width="256" height="271">
+        <br>
+        <br>
+        Wrapped Image 1: k=1<br>
+      </td>
+      <td valign="top" align="center"><img src="Piet_Mondrian_1_twirl_3.png" width="256" height="271">
+        <br>
+        <br>
+        Wrapped Image 2: k=3<br>
+      </td>
+      <td valign="top" align="center"><img src="Piet_Mondrian_1_twirl_5.png" width="256" height="271">
+        <br>
+        <br>
+        Wrapped Image 3: k=5<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top" align="center"><img src="patches.png"  width="200" height="200">
+        <br>
+        <br>
+        Original Image<br>
+      </td>
+      <td valign="top" align="center"><img src="patches_twirl_1.png" width="200" height="200">
+        <br>
+        <br>
+        Wrapped Image 1: k=1<br>
+      </td>
+      <td valign="top" align="center"><img src="patches_twirl_3.png" width="200" height="200">
+        <br>
+        <br>
+        Wrapped Image 2: k=3<br>
+      </td>
+      <td valign="top" align="center"><img src="patches_twirl_5.png" width="200" height="200">
+        <br>
+        <br>
+        Wrapped Image 3: k=5<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<hr style="font-family: Helvetica,Arial,sans-serif;">
+<h2 style="font-family:Arial;text-align:center;"><b>Advanced Extension: Tile</b></h2>
+<table border="0" cellpadding="2" cellspacing="2" width="100%" style="font-family:courier,monospace;">
+  <tbody>
+    <tr>
+      <td valign="top" align="center"><img src="conan.jpg" width="256" height="192">
+        <br>
+        <br>
+        Original Image<br>
+      </td>
+      <td valign="top" align="center"><img src="tile_3_3.png" width="256" height="192">
+        <br>
+        <br>
+        tile 3 3<br>
+      </td>
+      <td valign="top" align="center"><img src="tile_3_2.png" width="256" height="192">
+        <br>
+        <br>
+        tile 3 2<br>
+      </td>
+      <td valign="top" align="center"><img src="tile_2_3.png" width="256" height="192">
+        <br>
+        <br>
+        tile 2 3<br>
+      </td>
+    </tr>
+  </tbody>
+
+
+</body>
+</html>
