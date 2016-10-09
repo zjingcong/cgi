@@ -54,19 +54,26 @@ void wrapimage()
   // fill the output image with a clear transparent color(0, 0, 0, 0)
   for (int i = 0; i < xres_out * yres_out * 4; i++) {outputpixmap[i] = 0;} 
   
-  double twirl_f = 4;
+  // twirl image transformation parameters
+  double twirl_f = 1;
 
-  // get the min, max of x, y coordinates for 4 corners of the original image 
+  // get the min, max of x, y coordinates of the original image 
   // to find the range of wrapped image
+  // calculate the entire image, not only the 4 corners of the image
+  // because the max/min value of x, y coordinates may not on the corners
   double scale_factor_x, scale_factor_y;
   double x_max = 0;
   double y_max = 0;
   double x_min = 1;
   double y_min = 1;
-  for (int u = 0; u <= 1; u++)
+  for (int row = 0; row < yres; row++)
   {
-    for (int v = 0; v <= 1; v++)
+    for (int col = 0; col < xres; col++)
     {
+      // coordinate normalization
+      double u = (float(col) + 0.5) / float(xres);
+      double v = (float(row) + 0.5) / float(yres);
+
       // wrap function 2: twirl image
       double uu = (u - 0.5) * 2;
       double vv = (v - 0.5) * 2;
@@ -74,8 +81,6 @@ void wrapimage()
       double a = atan2(vv, uu);
       double x = r * cos(a - twirl_f * r) / 2 + 0.5;
       double y = r * sin(a - twirl_f * r) / 2 + 0.5;
-
-      cout << x << " " << y << endl;
 
       x_max = (x > x_max) ? x : x_max;
       y_max = (y > y_max) ? y : y_max;
@@ -85,7 +90,6 @@ void wrapimage()
   }
   scale_factor_x = x_max - x_min;
   scale_factor_y = y_max - y_min;
-  cout << scale_factor_x << " " << scale_factor_y << endl;
 
   // inverse map
   double x, y, u, v;
@@ -102,8 +106,8 @@ void wrapimage()
       // v = pow((sin(M_PI * y / 2)), 2.0);
 
       // wrap fuction 2: twirl image
-      double xx = (x - 0.5) * 2 * scale_factor_x;
-      double yy = (y - 0.5) * 2 * scale_factor_y;
+      double xx = ((x * scale_factor_x + x_min) - 0.5) * 2;
+      double yy = ((y * scale_factor_y + y_min) - 0.5) * 2;
 
       double r = pow((pow(xx, 2.0) + pow(yy, 2.0)), 0.5);
       double a = atan2(yy, xx);
