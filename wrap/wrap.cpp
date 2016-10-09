@@ -44,13 +44,48 @@ static int xres_out, yres_out;  // output image size: width, height
 
 void wrapimage()
 {
-  xres_out = xres * pow(2.0, 0.5);
-  yres_out = yres * pow(2.0, 0.5);
-
+  // xres_out = xres * pow(2.0, 0.5);
+  // yres_out = yres * pow(2.0, 0.5);
+  xres_out = xres;
+  yres_out = yres;  
+  
   // allocate memory for output pixmap: output image is 4 channels
   outputpixmap = new unsigned char [xres_out * yres_out * 4];
   // fill the output image with a clear transparent color(0, 0, 0, 0)
   for (int i = 0; i < xres_out * yres_out * 4; i++) {outputpixmap[i] = 0;} 
+  
+  double twirl_f = 4;
+
+  // get the min, max of x, y coordinates for 4 corners of the original image 
+  // to find the range of wrapped image
+  double scale_factor_x, scale_factor_y;
+  double x_max = 0;
+  double y_max = 0;
+  double x_min = 1;
+  double y_min = 1;
+  for (int u = 0; u <= 1; u++)
+  {
+    for (int v = 0; v <= 1; v++)
+    {
+      // wrap function 2: twirl image
+      double uu = (u - 0.5) * 2;
+      double vv = (v - 0.5) * 2;
+      double r = pow((pow(uu, 2.0) + pow(vv, 2.0)), 0.5);
+      double a = atan2(vv, uu);
+      double x = r * cos(a - twirl_f * r) / 2 + 0.5;
+      double y = r * sin(a - twirl_f * r) / 2 + 0.5;
+
+      cout << x << " " << y << endl;
+
+      x_max = (x > x_max) ? x : x_max;
+      y_max = (y > y_max) ? y : y_max;
+      x_min = (x < x_min) ? x : x_min;
+      y_min = (y < y_min) ? y : y_min;
+    }
+  }
+  scale_factor_x = x_max - x_min;
+  scale_factor_y = y_max - y_min;
+  cout << scale_factor_x << " " << scale_factor_y << endl;
 
   // inverse map
   double x, y, u, v;
@@ -67,10 +102,13 @@ void wrapimage()
       // v = pow((sin(M_PI * y / 2)), 2.0);
 
       // wrap fuction 2: twirl image
-      double r = pow((pow((x - 0.5) * 2, 2.0) + pow((y - 0.5) * 2, 2.0)), 0.5);
-      double a = atan2((y - 0.5) * 2, (x - 0.5) * 2);
-      u = pow(2.0, 0.5) * (r * cos(a + 1 * r)) / 2 + 0.5;
-      v = pow(2.0, 0.5) * (r * sin(a + 1 * r)) / 2 + 0.5;
+      double xx = (x - 0.5) * 2 * scale_factor_x;
+      double yy = (y - 0.5) * 2 * scale_factor_y;
+
+      double r = pow((pow(xx, 2.0) + pow(yy, 2.0)), 0.5);
+      double a = atan2(yy, xx);
+      u = (r * cos(a + twirl_f * r) / 2) + 0.5;
+      v = (r * sin(a + twirl_f * r) / 2) + 0.5;
 
       if (u <= 1 && v <= 1 && u >= 0 && v >= 0)
       {
