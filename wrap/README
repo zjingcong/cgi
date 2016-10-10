@@ -11,7 +11,6 @@ Run wrap to wrap image.
     mode 1 - stretch image: magnify the right side and minify the left side
     mode 2 - twirl image: increase the wrap parameter to enhance image twirling
   The default mode is twirl image with wrap parameter 2.
-  The wrapped image size keep the same with the original one.
   -Usage: 
     wrap input_image_name [output_image_name] [mode] [wrap_parameter]
   -Mouse Response:

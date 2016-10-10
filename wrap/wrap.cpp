@@ -4,7 +4,6 @@ The program provide two types of wrap operation:
   mode 1 - stretch image: magnify the right side and minify the left side
   mode 2 - twirl image: increase the wrap parameter to enhance image twirling
 The default mode is twirl image with wrap parameter 2.
-The wrapped image size keep the same with the original one.
 
 Usage: 
 wrap input_image_name [output_image_name] [mode] [wrap_parameter]
@@ -51,17 +50,7 @@ wrap image
   mode 2 - twirl image
 */
 void wrapimage(int mode, double parameter)
-{
-  // xres_out = xres * pow(2.0, 0.5);
-  // yres_out = yres * pow(2.0, 0.5);
-  xres_out = xres;
-  yres_out = yres;  
-  
-  // allocate memory for output pixmap: output image is 4 channels
-  outputpixmap = new unsigned char [xres_out * yres_out * 4];
-  // fill the output image with a clear transparent color(0, 0, 0, 0)
-  for (int i = 0; i < xres_out * yres_out * 4; i++) {outputpixmap[i] = 0;} 
-  
+{ 
   // twirl image transformation parameters
   double twirl_f = parameter;
 
@@ -86,6 +75,8 @@ void wrapimage(int mode, double parameter)
       switch (mode)
       {
         case 1:
+          scale_factor_x = 1;
+          scale_factor_y = 1;
           break;
         case 2:
           // wrap function 2: twirl image
@@ -109,6 +100,14 @@ void wrapimage(int mode, double parameter)
   scale_factor_x = x_max - x_min;
   scale_factor_y = y_max - y_min;
 
+  // modify the output image size
+  xres_out = xres * scale_factor_x;
+  yres_out = yres * scale_factor_y;
+  // allocate memory for output pixmap: output image is 4 channels
+  outputpixmap = new unsigned char [xres_out * yres_out * 4];
+  // fill the output image with a clear transparent color(0, 0, 0, 0)
+  for (int i = 0; i < xres_out * yres_out * 4; i++) {outputpixmap[i] = 0;} 
+
   // inverse map
   double x, y, u, v;
   for (int row_out = 0; row_out < yres_out; row_out++)  // output row
@@ -126,7 +125,7 @@ void wrapimage(int mode, double parameter)
         case 1:
           // wrap fuction 1
           u = pow(x, 0.25);
-          v = pow((sin(M_PI * y / 2)), 2.0);
+          v = pow((sin(M_PI * y / 2)), 2.0);         
           break;
         case 2:
           // wrap fuction 2: twirl image
