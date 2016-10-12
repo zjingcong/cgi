@@ -7,12 +7,15 @@ Date: 2016-10-09             |
 This program is to wrap an input image and optionally write out to an image file.
 
 Run wrap to wrap image.
+  The output image size is decided by the wrap function.
   The program provide two types of wrap operation:
     mode 1 - stretch image: magnify the right side and minify the left side
     mode 2 - twirl image: increase the wrap parameter to enhance image twirling
+    mode 3 - magnifying glass effect
   The default mode is twirl image with wrap parameter 2.
   -Usage: 
     wrap input_image_name [output_image_name] [mode] [wrap_parameter]
+    [mode] = 1, 2, 3 (only mode 2 has a wrap parameter)
   -Mouse Response:
     Left click any of the displayed windows to quit the program.
 

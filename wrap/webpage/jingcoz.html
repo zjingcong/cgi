@@ -8,19 +8,19 @@
 
 <hr style="font-family: Helvetica,Arial,sans-serif;">
 <h2 style="font-family:Arial;text-align:center;"><b>Basic Requirements</b></h2>
-<h4 style="font-family:Arial;text-align:left;"><b>Wrap Function 1: magnify right side and minify left side</b></h4>
+<h4 style="font-family:Arial;text-align:left;"><b>Wrap Function 1</b></h4>
 <div align="center">
 <table border="0" cellpadding="5" cellspacing="5" width="25%" style="font-family:courier,monospace;">
   <tbody>
     <tr>
       <td valign="top" align="left">
         <b>x = u^4<br>
-        <b>y = 2/pi * asin(sqrt(v))<br>
+        <b>y = (2/pi) * asin(sqrt(v))<br>
     </tr>
     <tr>
       <td valign="top" align="left">
         <b>u = pow(x, 0.25)<br>
-        <b>v = (sin(pi/2 * y))^2<br>
+        <b>v = (sin((pi/2) * y))^2<br>
     </tr>
   </tbody>
 </table>
@@ -52,8 +52,8 @@
     </tr>
   </tbody>
 </table>
-
-<h4 style="font-family:Arial;text-align:left;"><b>Wrap Function 2: twirl image</b></h4>
+<br>
+<h4 style="font-family:Arial;text-align:left;"><b>Wrap Function 2</b></h4>
 <div align="center">
 <table border="0" cellpadding="5" cellspacing="5" width="25%" style="font-family:courier,monospace;">
   <tbody>
@@ -123,6 +123,55 @@
     </tr>
   </tbody>
 </table>
+<br>
+<h4 style="font-family:Arial;text-align:left;"><b>Wrap Function 3</b></h4>
+<div align="center">
+<table border="0" cellpadding="5" cellspacing="5" width="38%" style="font-family:courier,monospace;">
+  <tbody>
+    <tr>
+      <td valign="top" align="left">
+        <b>r = sqrt((2*u-1)^2+(2*v-1)^2)<br>
+        <b>theta = atan2(2*v-1, 2*u-1)<br>
+        <b>x = (sqrt(4*r+0.25)/2-0.25)*sin(theta)/2+0.5<br>
+        <b>y = (sqrt(4*r+0.25)/2-0.25)*sin(theta)/2+0.5<br>
+    </tr>
+    <tr>
+      <td valign="top" align="left">
+        <b>r = sqrt((2*x-1)^2+(2*y-1)^2)<br>
+        <b>theta = atan2(2*y-1, 2*x-1)<br>
+        <b>u = (r+0.5)*r*cos(theta)/2+0.5<br>
+        <b>v = (r+0.5)*r*sin(theta)/2+0.5<br>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<table border="0" cellpadding="5" cellspacing="5" width="100%" style="font-family:courier,monospace;">
+  <tbody>
+    <tr>
+      <td valign="top" align="center"><img src="cat.jpg"  width="256" height="171">
+        <br>
+        <br>
+        Original Image 1<br>
+      </td>
+      <td valign="top" align="center"><img src="cat_mle.png" width="256" height="171">
+        <br>
+        <br>
+        Wrapped Image 1<br>
+      </td>
+      <td valign="top" align="center"><img src="conan.jpg" width="256" height="192">
+        <br>
+        <br>
+        Original Image 2<br>
+      </td>
+      <td valign="top" align="center"><img src="conan_mle.png" width="256" height="192">
+        <br>
+        <br>
+        Wrapped Image 2<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 <hr style="font-family: Helvetica,Arial,sans-serif;">
 <h2 style="font-family:Arial;text-align:center;"><b>Advanced Extension: Tile</b></h2>
@@ -151,7 +200,8 @@
       </td>
     </tr>
   </tbody>
-
+</table>
+<br>
 
 </body>
 </html>

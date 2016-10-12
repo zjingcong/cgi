@@ -236,10 +236,10 @@ void handleReshape(int w, int h, int img_width, int img_height)
 {
   float factor = 1;
   // make the image scale down to the largest size when user decrease the size of window
-  if (w < xres || h < yres)
+  if (w < img_width || h < img_height)
   {
-    float xfactor = w / float(xres);
-    float yfactor = h / float(yres);
+    float xfactor = w / float(img_width);
+    float yfactor = h / float(img_height);
     factor = xfactor;
     if (xfactor > yfactor)  {factor = yfactor;}    // fix the image shape when scale down the image size
     glPixelZoom(factor, factor);

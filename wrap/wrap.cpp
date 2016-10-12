@@ -1,12 +1,15 @@
 /*
 OpenGL and GLUT program to wrap an input image, display original ans wrapped image, and optionally write out the image to an image file.
+The output image size is decided by the wrap function.
 The program provide two types of wrap operation:
   mode 1 - stretch image: magnify the right side and minify the left side
   mode 2 - twirl image: increase the wrap parameter to enhance image twirling
+  mode 3 - magnifying glass effect
 The default mode is twirl image with wrap parameter 2.
 
 Usage: 
 wrap input_image_name [output_image_name] [mode] [wrap_parameter]
+[mode] = 1, 2, 3 (only mode 2 has a wrap parameter)
 
 Mouse Response:
   Left click any of the displayed windows to quit the program.
@@ -48,6 +51,7 @@ static int xres_out, yres_out;  // output image size: width, height
 wrap image
   mode 1 - stretch image
   mode 2 - twirl image
+  mode 3 - magnifying glass effect
 */
 void wrapimage(int mode, double parameter)
 { 
@@ -72,11 +76,13 @@ void wrapimage(int mode, double parameter)
       double u = (float(col) + 0.5) / float(xres);
       double v = (float(row) + 0.5) / float(yres);
       
+      // forward mapping functions
       switch (mode)
       {
         case 1:
-          scale_factor_x = 1;
-          scale_factor_y = 1;
+          // wrap function 1
+          x = pow(u, 4.0);
+          y = (2 / M_PI) * asin(pow(v, 0.5));
           break;
         case 2:
           // wrap function 2: twirl image
@@ -86,6 +92,15 @@ void wrapimage(int mode, double parameter)
           theta = atan2(vv, uu);
           x = r * cos(theta - twirl_f * r) / 2 + 0.5;
           y = r * sin(theta - twirl_f * r) / 2 + 0.5;
+          break;
+        case 3:
+          // wrap fuction 2: magnifying len effect
+          uu = (u - 0.5) * 2;
+          vv = (v - 0.5) * 2;
+          r = pow((pow(uu, 2.0) + pow(vv, 2.0)), 0.5);
+          theta = atan2(vv, uu);
+          x = (pow((4 * r + 0.25), 0.5) / 2 - 0.25) * cos(theta) / 2 + 0.5;
+          y = (pow((4 * r + 0.25), 0.5) / 2 - 0.25) * sin(theta) / 2 + 0.5;
           break;
         default:
           return;
@@ -119,7 +134,8 @@ void wrapimage(int mode, double parameter)
       y = (float(row_out) + 0.5) / float(yres_out);
       
       double xx, yy, r, a;
-
+      
+      // inverse mapping functions
       switch (mode)
       {
         case 1:
@@ -136,6 +152,15 @@ void wrapimage(int mode, double parameter)
           a = atan2(yy, xx);
           u = (r * cos(a + twirl_f * r) / 2) + 0.5;
           v = (r * sin(a + twirl_f * r) / 2) + 0.5;
+          break;
+        case 3:
+          // wrap fuction 2: magnifying len effect
+          xx = ((x * scale_factor_x + x_min) - 0.5) * 2;
+          yy = ((y * scale_factor_y + y_min) - 0.5) * 2;
+          r = pow((pow(xx, 2.0) + pow(yy, 2.0)), 0.5);
+          a = atan2(yy, xx);
+          u = (r + 0.5) * r * cos(a) / 2 + 0.5;
+          v = (r + 0.5) * r * sin(a) / 2 + 0.5;
           break;
         default:
           return;      
@@ -304,10 +329,10 @@ void handleReshape(int w, int h, int img_width, int img_height)
 {
   float factor = 1;
   // make the image scale down to the largest size when user decrease the size of window
-  if (w < xres || h < yres)
+  if (w < img_width || h < img_height)
   {
-    float xfactor = w / float(xres);
-    float yfactor = h / float(yres);
+    float xfactor = w / float(img_width);
+    float yfactor = h / float(img_height);
     factor = xfactor;
     if (xfactor > yfactor)  {factor = yfactor;}    // fix the image shape when scale down the image size
     glPixelZoom(factor, factor);
@@ -329,7 +354,11 @@ void handleReshape_out(int w, int h)  {handleReshape(w, h, xres_out, yres_out);}
 
 /*
 command line options parser
-  wrap input_image_name [output_image_name](optional)
+  wrap input_image_name [output_image_name](optional) [wrap_mode] [wrap_parameter]
+  mode selection:     
+    mode 1 - stretch image
+    mode 2 - twirl image
+    mode 3 - magnifying glass effect
 */
 void getCmdOptions(int argc, char* argv[], string &inputImage, string &outputImage, int &mode, double &parameter)
 {
@@ -339,14 +368,14 @@ void getCmdOptions(int argc, char* argv[], string &inputImage, string &outputIma
     if (argc > 2)
     {
       string tmp = argv[2];
-      if (tmp == "1" || tmp == "2") {mode = atoi(argv[2]);  if (argc > 3) {parameter = atof(argv[3]);}}
+      if (tmp == "1" || tmp == "2" || tmp == "3") {mode = atoi(argv[2]);  if (argc > 3) {parameter = atof(argv[3]);}}
       else
       {
         outputImage = argv[2];
         if (argc > 3)
         {
           tmp = argv[3];
-          if (tmp == "1" || tmp == "2") {mode = atoi(argv[3]);  if (argc > 4) {parameter = atof(argv[4]);}}
+          if (tmp == "1" || tmp == "2" || tmp == "3") {mode = atoi(argv[3]);  if (argc > 4) {parameter = atof(argv[4]);}}
         }
       }
     }
@@ -356,7 +385,7 @@ void getCmdOptions(int argc, char* argv[], string &inputImage, string &outputIma
   {
     cout << "[HELP]" << endl;
     cout << "[Usage] wrap input_image_name [output_image_name] [wrap_mode] [wrap_parameter]" << endl;
-    cout << "[wrap_mode] 1 - stretch image, 2 - twirl image" << endl;
+    cout << "[wrap_mode] 1 - stretch image, 2 - twirl image, 3 - magnifying len effect. Only mode 2 has a wrap parameter." << endl;
     exit(0);
   }
 }
@@ -389,11 +418,9 @@ int main(int argc, char* argv[])
   
   // create the graphics window, giving width, height, and title text
   glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-  int width = (xres > xres_out) ? xres : xres_out;
-  int height = (yres > yres_out) ? yres : yres_out;
-  glutInitWindowSize(width, height);
 
   // first window: input image
+  glutInitWindowSize(xres, yres);
   glutCreateWindow("Input Image");  
   // set up the callback routines to be called when glutMainLoop() detects an event
   glutDisplayFunc(displayInput);	  // display callback
@@ -401,7 +428,8 @@ int main(int argc, char* argv[])
   glutReshapeFunc(handleReshape_in); // window resize callback
 
   // second window: output image
-  glutCreateWindow("Wrapped Image");  
+  glutInitWindowSize(xres_out, yres_out);
+  glutCreateWindow("Wrapped Image");
   // set up the callback routines to be called when glutMainLoop() detects an event
   glutDisplayFunc(displayOutput);	  // display callback
   glutMouseFunc(mouseClick);  // mouse callback
