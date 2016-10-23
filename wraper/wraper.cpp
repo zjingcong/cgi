@@ -8,7 +8,7 @@
 # include <math.h>
 # include <cmath>
 # include <iomanip>
-#include "matrix.h"
+# include "matrix.h"
 
 # ifdef __APPLE__
 #   pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -19,6 +19,9 @@
 
 using namespace std;
 OIIO_NAMESPACE_USING
+
+# define max(x, y) (x > y ? x : y)
+# define min(x, y) (x < y ? x : y)
 
 static Matrix3D transMatrix;  // transform matrix for the entire transform
 static unsigned char *inputpixmap;  // input image pixels pixmap
@@ -238,7 +241,7 @@ void getCmdOptions(int argc, char **argv, string &inputImage, string &outputImag
 
 
 /*
-calculate transform matrix
+calculate forward transform matrix
 */
 void generateMatrix()
 {
@@ -300,9 +303,44 @@ void generateMatrix()
 }
 
 
+/*
+four corner forward wrap to make space for output image pixmap
+*/
 void boundingbox()
 {
+  Vector2D u0, u1, u2, u3;
+  u0.x = 0;
+  u0.y = 0;
+  u1.x = xres;
+  u1.y = 0;
+  u2.x = 0;
+  u2.y = yres;
+  u3.x = xres;
+  u3.y = yres;
+
+  double x0, y0, x1, y1, x2, y2, x3, y3, x_min, x_max, y_min, y_max;
+  x0 = (transMatrix * u0).x;
+  y0 = (transMatrix * u0).y;
+  x1 = (transMatrix * u1).x;
+  y1 = (transMatrix * u1).y;
+  x2 = (transMatrix * u2).x;
+  y2 = (transMatrix * u2).y;
+  x3 = (transMatrix * u3).x;
+  y3 = (transMatrix * u3).y;
   
+  x_max = max(max(x0, x1), max(x2, x3));
+  x_min = min(min(x0, x1), min(x2, x3));
+  y_max = max(max(y0, y1), max(y2, y3));
+  y_min = min(min(y0, y1), min(y2, y3));
+  xres_out = ceil(x_max - x_min);
+  yres_out = ceil(y_max - y_min);
+  
+  cout << "Output image size: " << xres_out << "x" << yres_out << endl;
+}
+
+
+void inversemap()
+{
 }
 
 
@@ -318,6 +356,13 @@ int main(int argc, char* argv[])
   getCmdOptions(argc, argv, inputImage, outputImage);
   // read input image
   readimage(inputImage);
+  // calculate transform matrix
+  generateMatrix();
+  boundingbox();
+  // wrap the original image
+  // wrapimage(mode, parameter);
+  // write out to an output image file
+  if (outputImage != "") {writeimage(outputImage);}
   
   // display input image and output image in seperated windows
   // start up the glut utilities
@@ -333,14 +378,8 @@ int main(int argc, char* argv[])
   glutDisplayFunc(displayInput);	  // display callback
   glutMouseFunc(mouseClick);  // mouse callback
   glutReshapeFunc(handleReshape_in); // window resize callback
-
-  // calculate transform matrix
-  generateMatrix();
-  // wrap the original image
-  // wrapimage(mode, parameter);
-  // write out to an output image file
-  if (outputImage != "") {writeimage(outputImage);}
-
+  
+  // display the output image
   // second window: output image
   glutInitWindowSize(xres_out, yres_out);
   glutCreateWindow("Wrapped Image");
