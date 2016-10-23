@@ -50,7 +50,7 @@ void readimage(string infilename)
     xres = spec.width;
     yres = spec.height;
     int channels = spec.nchannels;
-    cout << "Input image size: " << xres << "x" << yres << endl;
+    cout << "input image size: " << xres << "x" << yres << endl;
     cout << "channels: " << channels << endl;
 
     unsigned char tmppixmap[xres * yres * channels];
@@ -285,6 +285,13 @@ void generateMatrix()
         if (xf == 1)  {xform[0][0] = -1;}
         if (yf == 1)  {xform[1][1] = -1;}
         break;
+      // shear
+      case 'h':
+        double hx, hy;
+        cin >> hx >> hy;
+        xform[0][1] = hx;
+        xform[1][0] = hy;
+        break;
       // perspective
       case 'p':
         double px, py;
@@ -298,7 +305,7 @@ void generateMatrix()
     cin >> tag;
   }
   transMatrix = xform * transMatrix;
-  cout << "Transform Matrix: " << endl;
+  cout << "transform matrix: " << endl;
   transMatrix.print();
 }
 
@@ -335,12 +342,52 @@ void boundingbox()
   xres_out = ceil(x_max - x_min);
   yres_out = ceil(y_max - y_min);
   
-  cout << "Output image size: " << xres_out << "x" << yres_out << endl;
+  cout << "output image size: " << xres_out << "x" << yres_out << endl;
+  cout << x_min << " " << y_min << endl;
+
+  // extra transform: set x_min and y_min to 0
+  Matrix3D translation;
+  translation[0][2] = 0 - x_min;
+  translation[1][2] = 0 - y_min;
+  transMatrix = translation * transMatrix;
+  cout << "transform matrix with extra translation: " << endl;
+  transMatrix.print();
 }
 
 
 void inversemap()
 {
+  outputpixmap = new unsigned char [xres_out * yres_out * 4];
+  // fill the output image with a clear transparent color(0, 0, 0, 0)
+  for (int i = 0; i < xres_out * yres_out * 4; i++) {outputpixmap[i] = 0;}
+
+  Matrix3D invMatrix;
+  invMatrix = transMatrix.inverse();
+
+  for (int row_out = 0; row_out < yres_out; row_out++)  // output image row
+  {
+    for (int col_out = 0; col_out < xres_out; col_out++)  // output image col
+    {
+      // output coordinate
+      Vector2D xx;
+      xx.x = col_out + 0.5;
+      xx.y = row_out + 0.5;
+
+      // inverse mapping
+      double u, v;
+      u = (invMatrix * xx).x;
+      v = (invMatrix * xx).y;
+      int row_in, col_in;
+      row_in = floor(v);
+      col_in = floor(u);
+      
+      if (row_in < yres && row_in >= 0 && col_in < xres && col_in >= 0)
+      {
+        for (int k = 0; k < 4; k++)
+        {outputpixmap[(row_out * xres_out + col_out) * 4 + k] = inputpixmap[(row_in * xres + col_in) * 4 + k];}
+      }
+    }
+  }
 }
 
 
@@ -359,8 +406,8 @@ int main(int argc, char* argv[])
   // calculate transform matrix
   generateMatrix();
   boundingbox();
-  // wrap the original image
-  // wrapimage(mode, parameter);
+  inversemap();
+  cout << "inverse complete." << endl;
   // write out to an output image file
   if (outputImage != "") {writeimage(outputImage);}
   
