@@ -3,6 +3,16 @@
 
    D. H. House  10/26/94
 */
+# include <OpenImageIO/imageio.h>
+# include <stdlib.h>
+# include <cstdlib>
+# include <iostream>
+# include <fstream>
+# include <string>
+# include <algorithm>
+# include <math.h>
+# include <cmath>
+# include <iomanip>
 
 #include "matrix.h"
 
@@ -182,6 +192,7 @@ void setbilinear(double width, double height, Vector2D xycorners[4],
   coeff.b3 = xycorners[2].y - xycorners[1].y -
     xycorners[3].y + xycorners[0].y;
   coeff.c2 = coeff.a3 * coeff.b2 - coeff.a2 * coeff.b3;
+  // cout << coeff.a0 << " " << coeff.b0 << " " << coeff.a1 << " " << coeff.b1 << " " << coeff.a2 << " " << coeff.b2 << endl;
 }
 
 /*
@@ -193,6 +204,8 @@ void invbilinear(const BilinearCoeffs &c, Vector2D xy, Vector2D &uv){
   double discriminant;
   double c0, c1;
   static double EPSILON = 1.0e-5;
+
+  // cout << c.a0 << " " << c.b0 << " " << c.a1 << " " << c.b1 << " " << c.a2 << " " << c.b2 << endl;
 
   if(fabs(c.c2) <= EPSILON){
     uv.y = (c.a1 * xy.y - c.a1 * c.b0 - c.b1 * xy.x + c.a0 * c.b1) /

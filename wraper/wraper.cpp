@@ -1,3 +1,36 @@
+/*
+OpenGL and GLUT program to wrap an input image with matrix commands or mouse click corner positions, display original ans wrapped image, and optionally write out the image to an image file.
+
+The program provide two types of wrap operation:
+  Projective wrap - do translation, scale, shear, flip, rotation, perspective transformation with matrix commands
+  Bilinear wrap - do bilinear transformation with matrix commands
+  Interactive - let the user interactively position four corners of the output image in the output window with mouse click
+
+Usage: 
+wraper input_image_name [output_image_name] [mode]
+default mode: projective mode
+mode switch:
+  -b          bilinear switch - do the bilinear warp instead of a perspective warp
+  -i          interactive switch
+matrix commands:
+  r theta     counter clockwise rotation about image origin, theta in degrees
+  s sx sy     scale (watch out for scale by 0!)
+  t dx dy     translate
+  f xf yf     flip - if xf = 1 flip horizontal, yf = 1 flip vertical
+  h hx hy     shear
+  p px py     perspective
+  d           done
+
+Mouse Response:
+  In interactive mode, left click in the output window to position output image corners
+Keyboard Response:
+  Press q, Q or exit to quit the program.
+
+Jingcong Zhang
+jingcoz@g.clemson.edu
+2016-10-25
+*/
+
 # include <OpenImageIO/imageio.h>
 # include <stdlib.h>
 # include <cstdlib>
@@ -107,6 +140,7 @@ matrix command parser
 */
 void generateMatrix()
 {
+  cout << "Please enter matrix commands: " << endl;
   Matrix3D xform;
   char tag;
   cin >> tag;
@@ -180,12 +214,12 @@ void boundingbox(Vector2D xycorners[])
   Vector2D u0, u1, u2, u3;
   u0.x = 0;
   u0.y = 0;
-  u1.x = xres;
-  u1.y = 0;
-  u2.x = 0;
+  u1.x = 0;
+  u1.y = yres;
+  u2.x = xres;
   u2.y = yres;
   u3.x = xres;
-  u3.y = yres;
+  u3.y = 0;
 
   //Vector2D xy0, xy1, xy2, xy3;
   xycorners[0] = transMatrix * u0;
@@ -258,7 +292,8 @@ void inversemap()
       }
     }
   }
-  cout << "projective inverse complete." << endl;
+  cout << "Projective inverse complete." << endl;
+  cout << "Press Q or q to quit." << endl;
 }
 
 
@@ -270,25 +305,21 @@ void bilinear(Vector2D xycorners[])
   outputpixmap = new unsigned char [xres_out * yres_out * 4];
   // fill the output image with a clear transparent color(0, 0, 0, 0)
   for (int i = 0; i < xres_out * yres_out * 4; i++) {outputpixmap[i] = 0;}
-  
-  cout << "corners: " << endl;
-  for (int i = 0; i < 4; i++) {cout << xycorners[i].x << " " << xycorners[i].y << endl;}
-  for (int i = 0; i < 4; i++) {xycorners[i] = translation * xycorners[i];}
-  cout << "----------------------" << endl;
-  cout << "new corners: " << endl;
-  for (int i = 0; i < 4; i++) {cout << xycorners[i].x << " " << xycorners[i].y << endl;}
 
+  // translate the corners
+  for (int i = 0; i < 4; i++) {xycorners[i] = translation * xycorners[i];}
+
+  BilinearCoeffs coeff;
+  setbilinear(xres, yres, xycorners, coeff);
   for (int row_out = 0; row_out < yres_out; row_out++)
   {
     for (int col_out = 0; col_out < xres_out; col_out++)
     {
       Vector2D xy, uv;
-      BilinearCoeffs coeff;
 
       xy.x = col_out + 0.5;
       xy.y = row_out + 0.5;
       // xy = translation.inverse() * xy;
-      setbilinear(xres_out, yres_out, xycorners, coeff);
       invbilinear(coeff, xy, uv);
 
       int row_in, col_in;
@@ -302,7 +333,8 @@ void bilinear(Vector2D xycorners[])
       }
     }
   }
-  cout << "bilinear inverse complete." << endl;
+  cout << "Bilinear inverse complete." << endl;
+  cout << "Press Q or q to quit." << endl;
 }
 
 
@@ -322,8 +354,14 @@ void interactive()
   interMatrix[1][1] = (mouseClickCorners[3].y - mouseClickCorners[1].y) / double(yres);
   interMatrix[1][2] = mouseClickCorners[0].y;
 
+  cout << "interMatrix: " << endl;
+  interMatrix.print();
+
   // inverse matrix
   Matrix3D invinterMatrix = interMatrix.inverse();
+  cout << "invinterMatrix: " << endl;
+  invinterMatrix.print();
+
   for (int row_out = 0; row_out < yres_out; row_out++)  // output image row
   {
     for (int col_out = 0; col_out < xres_out; col_out++)  // output image col
@@ -348,7 +386,8 @@ void interactive()
       }
     }
   }
-  cout << "interactive complete." << endl;
+  cout << "Interactive complete." << endl;
+  cout << "Press Q or q to quit." << endl;
 }
 
 

@@ -1,0 +1,33 @@
+Projective Image Warps
+------------------------------
+Name: Jingcong Zhang         |
+Email: jingcoz@g.clemson.edu |
+Date: 2016-10-25             |
+------------------------------
+This program can wrap an input image with matrix commands or mouse click corner positions, display original ans wrapped image, and optionally write out the image to an image file.
+
+The program provide two types of wrap operation:
+  Projective wrap - do translation, scale, shear, flip, rotation, perspective transformation with matrix commands
+  Bilinear wrap - do bilinear transformation with matrix commands
+  Interactive - let the user interactively position four corners of the output image in the output window with mouse click
+
+Usage: 
+wraper input_image_name [output_image_name] [mode]
+default mode: projective mode
+mode switch:
+  -b          bilinear switch - do the bilinear warp instead of a perspective warp
+  -i          interactive switch
+matrix commands:
+  r theta     counter clockwise rotation about image origin, theta in degrees
+  s sx sy     scale (watch out for scale by 0!)
+  t dx dy     translate
+  f xf yf     flip - if xf = 1 flip horizontal, yf = 1 flip vertical
+  h hx hy     shear
+  p px py     perspective
+  d           done
+
+Mouse Response:
+  In interactive mode, left click in the output window to position output image corners
+Keyboard Response:
+  Press q, Q or exit to quit the program.
+
