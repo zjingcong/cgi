@@ -343,16 +343,37 @@ void interactive()
   // interMatrix
   // | a b c ||u|   |x|
   // | d e f ||v| = |y|
-  // | g h 1 ||1|   |1|
-  // a = (x1 - x0) / width, b = (x3 - x1) / height, c = x0, d = (y1 - y0) / w0
-  // e = (y3 - y1) / height, f = y0, g = 0, h = 0
+  // | g h 1 ||1|   |w|
   Matrix3D interMatrix;
-  interMatrix[0][0] = (mouseClickCorners[1].x - mouseClickCorners[0].x) / double(xres);
-  interMatrix[0][1] = (mouseClickCorners[3].x - mouseClickCorners[1].x) / double(yres);
-  interMatrix[0][2] = mouseClickCorners[0].x;
-  interMatrix[1][0] = (mouseClickCorners[1].y - mouseClickCorners[0].y) / double(xres);
-  interMatrix[1][1] = (mouseClickCorners[3].y - mouseClickCorners[1].y) / double(yres);
-  interMatrix[1][2] = mouseClickCorners[0].y;
+  double x0, x1, x2, x3, y0, y1, y2, y3;
+  x0 = mouseClickCorners[0].x;
+  y0 = mouseClickCorners[0].y;
+  x1 = mouseClickCorners[1].x;
+  y1 = mouseClickCorners[1].y;
+  x2 = mouseClickCorners[2].x;
+  y2 = mouseClickCorners[2].y;
+  x3 = mouseClickCorners[3].x;
+  y3 = mouseClickCorners[3].y;
+
+  double a, b, c, d, e, f;
+  a = y1 - y2;
+  b = y3 - y2;
+  c = y0 - y2;
+  d = x1 - x2;
+  e = x3 - x2;
+  f = x0 - x2;
+  double w1, w3;
+  w1 = (f - a * e / b) / (d - a * e / b);
+  w3 = (f - c * d / a) / (e - b * d / a);
+
+  interMatrix[0][0] = (x3 * w3 - x0) / xres;
+  interMatrix[0][1] = (x1 * w1 - x0) / yres;
+  interMatrix[0][2] = x0;
+  interMatrix[1][0] = (y3 * w3 - y0) / xres;
+  interMatrix[1][1] = (y1 * w1 - y0) / yres;
+  interMatrix[1][2] = y0;
+  interMatrix[2][0] = (w3 - 1) / xres;
+  interMatrix[2][1] = (w1 - 1) / yres;
 
   cout << "interMatrix: " << endl;
   interMatrix.print();
@@ -560,6 +581,23 @@ void mouseClick(int button, int state, int x, int y)
     mouse_index++;
     if (mouse_index == 4)
     {
+      // mouseClick upside down
+      Vector2D tmp1;
+      tmp1.x = mouseClickCorners[0].x;
+      tmp1.y = mouseClickCorners[0].y;
+      mouseClickCorners[0].x = mouseClickCorners[1].x;
+      mouseClickCorners[0].y = mouseClickCorners[1].y;
+      mouseClickCorners[1].x = tmp1.x;
+      mouseClickCorners[1].y = tmp1.y;
+      Vector2D tmp2;
+      tmp2.x = mouseClickCorners[2].x;
+      tmp2.y = mouseClickCorners[2].y;
+      mouseClickCorners[2].x = mouseClickCorners[3].x;
+      mouseClickCorners[2].y = mouseClickCorners[3].y;
+      mouseClickCorners[3].x = tmp2.x;
+      mouseClickCorners[3].y = tmp2.y;
+      
+      // do the transformation and fresh the display
       interactive();
       glutPostRedisplay();
       if (outputImage != "")  {writeimage(outputImage);}
