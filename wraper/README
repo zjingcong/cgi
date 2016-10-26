@@ -8,8 +8,9 @@ This program can wrap an input image with matrix commands or mouse click corner 
 
 The program provide two types of wrap operation:
   Projective wrap - do translation, scale, shear, flip, rotation, perspective transformation with matrix commands
-  Bilinear wrap - do bilinear transformation with matrix commands
-  Interactive - let the user interactively position four corners of the output image in the output window with mouse click
+  Bilinear wrap   - do bilinear transformation with matrix commands
+  Interactive     - let the user interactively position four corners of the output image in the output window with mouse click
+                    the output window for click is 1024x600 and then reshape the size after output image generation
 
 Usage: 
 wraper input_image_name [output_image_name] [mode]
@@ -28,6 +29,7 @@ matrix commands:
 
 Mouse Response:
   In interactive mode, left click in the output window to position output image corners
+  Click order: (0, 0), (0, height), (width, height), (width, 0)
 Keyboard Response:
   Press q, Q or exit to quit the program.
 

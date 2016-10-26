@@ -3,8 +3,9 @@ OpenGL and GLUT program to wrap an input image with matrix commands or mouse cli
 
 The program provide two types of wrap operation:
   Projective wrap - do translation, scale, shear, flip, rotation, perspective transformation with matrix commands
-  Bilinear wrap - do bilinear transformation with matrix commands
-  Interactive - let the user interactively position four corners of the output image in the output window with mouse click
+  Bilinear wrap   - do bilinear transformation with matrix commands
+  Interactive     - let the user interactively position four corners of the output image in the output window with mouse click
+                    the output window for click is 1024x600 and then reshape the size after output image generation
 
 Usage: 
 wraper input_image_name [output_image_name] [mode]
@@ -23,8 +24,9 @@ matrix commands:
 
 Mouse Response:
   In interactive mode, left click in the output window to position output image corners
+  Click order: (0, 0), (0, height), (width, height), (width, 0)
 Keyboard Response:
-  Press q, Q or exit to quit the program.
+  Press q, Q or exit to quit the program
 
 Jingcong Zhang
 jingcoz@g.clemson.edu
@@ -201,8 +203,6 @@ void generateMatrix()
     cin >> tag;
   }
   transMatrix = xform * transMatrix;
-  cout << "transform matrix: " << endl;
-  transMatrix.print();
 }
 
 
@@ -244,7 +244,7 @@ void boundingbox(Vector2D xycorners[])
   y_min = min(min(y0, y1), min(y2, y3));
   xres_out = ceil(x_max - x_min);
   yres_out = ceil(y_max - y_min);
-  cout << "output image size: " << xres_out << "x" << yres_out << endl;
+  if (mode != 2)  {cout << "output image size: " << xres_out << "x" << yres_out << endl;}
   
   // calculate extra translation
   // extra translation transform: set x_min and y_min to 0
@@ -264,6 +264,8 @@ void inversemap()
 
   Matrix3D invMatrix;
   transMatrix = translation * transMatrix;
+  cout << "transform matrix: " << endl;
+  transMatrix.print();
   invMatrix = transMatrix.inverse();
   cout << "inverse matrix: " << endl;
   invMatrix.print();
@@ -319,7 +321,6 @@ void bilinear(Vector2D xycorners[])
 
       xy.x = col_out + 0.5;
       xy.y = row_out + 0.5;
-      // xy = translation.inverse() * xy;
       invbilinear(coeff, xy, uv);
 
       int row_in, col_in;
@@ -338,13 +339,20 @@ void bilinear(Vector2D xycorners[])
 }
 
 
+
+/*
+interactive mode
+  1) calculate transform matrix according to mouse click positions
+  2) add extra translation
+  3) do the inverse mapping
+  4) reshape the output image window
+*/
 void interactive()
 {
   // interMatrix
   // | a b c ||u|   |x|
   // | d e f ||v| = |y|
   // | g h 1 ||1|   |w|
-  Matrix3D interMatrix;
   double x0, x1, x2, x3, y0, y1, y2, y3;
   x0 = mouseClickCorners[0].x;
   y0 = mouseClickCorners[0].y;
@@ -366,20 +374,24 @@ void interactive()
   w1 = (f - a * e / b) / (d - a * e / b);
   w3 = (f - c * d / a) / (e - b * d / a);
 
-  interMatrix[0][0] = (x3 * w3 - x0) / xres;
-  interMatrix[0][1] = (x1 * w1 - x0) / yres;
-  interMatrix[0][2] = x0;
-  interMatrix[1][0] = (y3 * w3 - y0) / xres;
-  interMatrix[1][1] = (y1 * w1 - y0) / yres;
-  interMatrix[1][2] = y0;
-  interMatrix[2][0] = (w3 - 1) / xres;
-  interMatrix[2][1] = (w1 - 1) / yres;
+  transMatrix[0][0] = (x3 * w3 - x0) / xres;
+  transMatrix[0][1] = (x1 * w1 - x0) / yres;
+  transMatrix[0][2] = x0;
+  transMatrix[1][0] = (y3 * w3 - y0) / xres;
+  transMatrix[1][1] = (y1 * w1 - y0) / yres;
+  transMatrix[1][2] = y0;
+  transMatrix[2][0] = (w3 - 1) / xres;
+  transMatrix[2][1] = (w1 - 1) / yres;
 
+  // refresh the output image size and calculate extra translation
+  Vector2D xycorners[4];
+  boundingbox(xycorners);
+  // add extra translation
+  transMatrix = translation * transMatrix;
   cout << "interMatrix: " << endl;
-  interMatrix.print();
-
+  transMatrix.print();
   // inverse matrix
-  Matrix3D invinterMatrix = interMatrix.inverse();
+  Matrix3D invinterMatrix = transMatrix.inverse();
   cout << "invinterMatrix: " << endl;
   invinterMatrix.print();
 
@@ -408,6 +420,8 @@ void interactive()
     }
   }
   cout << "Interactive complete." << endl;
+  // resize the window
+  glutReshapeWindow(xres_out, yres_out);
   cout << "Press Q or q to quit." << endl;
 }
 
@@ -574,7 +588,7 @@ void mouseClick(int button, int state, int x, int y)
   {
     if (mouse_index < 4)
     {
-      cout << "point" << mouse_index << ": ("<< x << ", " << y << ")" << endl;
+      // cout << "point" << mouse_index << ": ("<< x << ", " << y << ")" << endl;
       mouseClickCorners[mouse_index].x = x;
       mouseClickCorners[mouse_index].y = y;
     }
@@ -673,12 +687,13 @@ int main(int argc, char* argv[])
 
     // interactive
     case 2:
-      xres_out = xres;
-      yres_out = yres;
+      xres_out = 1024;
+      yres_out = 600;
       outputpixmap = new unsigned char [xres_out * yres_out * 4];
       // fill the output image with a clear transparent color(0, 0, 0, 0)
       for (int i = 0; i < xres_out * yres_out * 4; i++) {outputpixmap[i] = 0;}
       cout << "Left click the mouse in the output window to position 4 corners for output image." << endl;
+      cout << "Click order: (0, 0), (0, height), (width, height), (width, 0)" << endl;
       break;
 
     default:
