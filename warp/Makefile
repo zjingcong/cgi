@@ -12,7 +12,7 @@ else
   endif
 endif
 
-PROJECT1		= wrap
+PROJECT1		= warp
 PROJECT2		= tile
 
 all: ${PROJECT1} ${PROJECT2}

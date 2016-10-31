@@ -15,7 +15,7 @@ endif
 HFILES	= matrix.h
 OFILES  = matrix.o
 
-PROJECT		= wraper
+PROJECT		= warper
 
 ${PROJECT}:	${PROJECT}.o ${OFILES}
 	${CC} ${LFLAGS} -o ${PROJECT} ${PROJECT}.o ${OFILES} ${LDFLAGS}
