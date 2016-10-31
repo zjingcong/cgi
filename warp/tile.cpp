@@ -66,7 +66,7 @@ void tileimage(int nrows, int ncols)
       x = (float(col_out) + 0.5) / float(xres_out);
       y = (float(row_out) + 0.5) / float(yres_out);
 
-      // wrap function: tile the original image
+      // warp function: tile the original image
       int i, j;
       j = x * ncols;
       u = (x - (j / float(ncols))) * ncols;
@@ -297,7 +297,7 @@ int main(int argc, char* argv[])
   
   // read input image
   readimage(inputImage);
-  // wrap the original image
+  // warp the original image
   tileimage(nrows, ncols);
   // write out to an output image file
   if (outputImage != "") {writeimage(outputImage);}

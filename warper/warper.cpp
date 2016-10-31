@@ -1,14 +1,14 @@
 /*
-OpenGL and GLUT program to wrap an input image with matrix commands or mouse click corner positions, display original ans wrapped image, and optionally write out the image to an image file.
+OpenGL and GLUT program to warp an input image with matrix commands or mouse click corner positions, display original ans warpped image, and optionally write out the image to an image file.
 
-The program provide two types of wrap operation:
-  Projective wrap - do translation, scale, shear, flip, rotation, perspective transformation with matrix commands
-  Bilinear wrap   - do bilinear transformation with matrix commands
+The program provide two types of warp operation:
+  Projective warp - do translation, scale, shear, flip, rotation, perspective transformation with matrix commands
+  Bilinear warp   - do bilinear transformation with matrix commands
   Interactive     - let the user interactively position four corners of the output image in the output window with mouse click
                     the output window for click is 1024x600 and then reshape the size after output image generation
 
 Usage: 
-wraper input_image_name [output_image_name] [mode]
+warper input_image_name [output_image_name] [mode]
 default mode: projective mode
 mode switch:
   -b          bilinear switch - do the bilinear warp instead of a perspective warp
@@ -66,14 +66,14 @@ static string inputImage;  // input image file name
 static string outputImage; // output image file name
 static int xres, yres;  // input image size: width, height
 static int xres_out, yres_out;  // output image size: width, height
-static int mode;  // program mode - 0: projective wrap (basic requirement), 1: bilinear wrap, 2: interactive mode
+static int mode;  // program mode - 0: projective warp (basic requirement), 1: bilinear warp, 2: interactive mode
 static Vector2D mouseClickCorners[4];
 static int mouse_index = 0;
 
 
 /*
 command line option parser
-wraper input_image_name [output_image_name] [mode]
+warper input_image_name [output_image_name] [mode]
 default mode: projective mode
 mode switch:
   -b          bilinear switch - do the bilinear warp instead of a perspective warp
@@ -91,9 +91,9 @@ void helpPrinter()
 {
   // print help message
   cout << "Help: " << endl;
-  cout << "[Usage] wraper input_image_name [output_image_name] [mode]" << endl;
+  cout << "[Usage] warper input_image_name [output_image_name] [mode]" << endl;
   cout << "--------------------------------------------------------------" << endl;
-  cout << "default mode: projective wrap" << endl;
+  cout << "default mode: projective warp" << endl;
   cout << "mode switch: " << endl;
   cout << "\t-b          bilinear switch - do the bilinear warp instead of a perspective warp\n"
        << "\t-i          interactive switch" << endl;
@@ -117,7 +117,7 @@ void getCmdOptions(int argc, char **argv, string &inputImage, string &outputImag
   }
   mode = 0;
   char **iter = getIter(argv, argv + argc, "-b");
-  if (iter != argv + argc)  {mode = 1;  cout << "program mode: bilinear wrap" << endl;}
+  if (iter != argv + argc)  {mode = 1;  cout << "program mode: bilinear warp" << endl;}
   else
   {
     iter = getIter(argv, argv + argc, "-i");
@@ -126,7 +126,7 @@ void getCmdOptions(int argc, char **argv, string &inputImage, string &outputImag
   inputImage = argv[1];
   if (mode == 0)
   {
-    cout << "program mode: projective wrap" << endl;
+    cout << "program mode: projective warp" << endl;
     if (argc == 3)  {outputImage = argv[2];}
   }
   else
@@ -207,7 +207,7 @@ void generateMatrix()
 
 
 /*
-four corners forward wrap to make space for output image pixmap
+four corners forward warp to make space for output image pixmap
 */
 void boundingbox(Vector2D xycorners[])
 {
@@ -254,7 +254,7 @@ void boundingbox(Vector2D xycorners[])
 
 
 /*
-projective wrap inverse map
+projective warp inverse map
 */
 void inversemap()
 {
@@ -300,7 +300,7 @@ void inversemap()
 
 
 /*
-bilinear wrap inverse map
+bilinear warp inverse map
 */
 void bilinear(Vector2D xycorners[])
 {
@@ -523,7 +523,7 @@ void writeimage(string outfilename)
       out -> write_image(TypeDesc::UINT8, pixmap);
     }
 
-    cout << "Write the wraped image to image file " << outfilename << endl;
+    cout << "Write the warped image to image file " << outfilename << endl;
     // close the file and free the ImageOutput I created
     out -> close();
     delete out;
@@ -665,7 +665,7 @@ int main(int argc, char* argv[])
   // inverse map
   switch (mode)
   {
-    // projective wrap
+    // projective warp
     case 0:
       // calculate transform matrix
       generateMatrix();
@@ -675,7 +675,7 @@ int main(int argc, char* argv[])
       if (outputImage != "") {writeimage(outputImage);}
       break;
 
-    // bilinear wrap
+    // bilinear warp
     case 1:
       // calculate transform matrix
       generateMatrix();

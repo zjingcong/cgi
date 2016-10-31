@@ -4,16 +4,16 @@ Name: Jingcong Zhang         |
 Email: jingcoz@g.clemson.edu |
 Date: 2016-10-25             |
 ------------------------------
-This program can wrap an input image with matrix commands or mouse click corner positions, display original ans wrapped image, and optionally write out the image to an image file.
+This program can warp an input image with matrix commands or mouse click corner positions, display original an warpped image, and optionally write out the image to an image file.
 
-The program provide two types of wrap operation:
-  Projective wrap - do translation, scale, shear, flip, rotation, perspective transformation with matrix commands
-  Bilinear wrap   - do bilinear transformation with matrix commands
+The program provide two types of warp operation:
+  Projective warp - do translation, scale, shear, flip, rotation, perspective transformation with matrix commands
+  Bilinear warp   - do bilinear transformation with matrix commands
   Interactive     - let the user interactively position four corners of the output image in the output window with mouse click
                     the output window for click is 1024x600 and then reshape the size after output image generation
 
 Usage: 
-wraper input_image_name [output_image_name] [mode]
+warper input_image_name [output_image_name] [mode]
 default mode: projective mode
 mode switch:
   -b          bilinear switch - do the bilinear warp instead of a perspective warp

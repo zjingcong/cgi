@@ -1,15 +1,15 @@
 /*
-OpenGL and GLUT program to wrap an input image, display original ans wrapped image, and optionally write out the image to an image file.
-The output image size is decided by the wrap function.
-The program provide two types of wrap operation:
+OpenGL and GLUT program to warp an input image, display original ans warped image, and optionally write out the image to an image file.
+The output image size is decided by the warp function.
+The program provide two types of warp operation:
   mode 1 - stretch image: magnify the right side and minify the left side
-  mode 2 - twirl image: increase the wrap parameter to enhance image twirling
+  mode 2 - twirl image: increase the warp parameter to enhance image twirling
   mode 3 - magnifying glass effect
-The default mode is twirl image with wrap parameter 2.
+The default mode is twirl image with warp parameter 2.
 
 Usage: 
-wrap input_image_name [output_image_name] [mode] [wrap_parameter]
-[mode] = 1, 2, 3 (only mode 2 has a wrap parameter)
+warp input_image_name [output_image_name] [mode] [warp_parameter]
+[mode] = 1, 2, 3 (only mode 2 has a warp parameter)
 
 Mouse Response:
   Left click any of the displayed windows to quit the program.
@@ -48,18 +48,18 @@ static int xres_out, yres_out;  // output image size: width, height
 
 
 /*
-wrap image
+warp image
   mode 1 - stretch image
   mode 2 - twirl image
   mode 3 - magnifying glass effect
 */
-void wrapimage(int mode, double parameter)
+void warpimage(int mode, double parameter)
 { 
   // twirl image transformation parameters
   double twirl_f = parameter;
 
   // get the min, max of x, y coordinates of the original image 
-  // to find the range of wrapped image
+  // to find the range of warpped image
   // calculate the entire image, not only the 4 corners of the image
   // because the max/min value of x, y coordinates may not on the corners
   double scale_factor_x, scale_factor_y;
@@ -80,12 +80,12 @@ void wrapimage(int mode, double parameter)
       switch (mode)
       {
         case 1:
-          // wrap function 1
+          // warp function 1
           x = pow(u, 4.0);
           y = (2 / M_PI) * asin(pow(v, 0.5));
           break;
         case 2:
-          // wrap function 2: twirl image
+          // warp function 2: twirl image
           uu = (u - 0.5) * 2;
           vv = (v - 0.5) * 2;
           r = pow((pow(uu, 2.0) + pow(vv, 2.0)), 0.5);
@@ -94,7 +94,7 @@ void wrapimage(int mode, double parameter)
           y = r * sin(theta - twirl_f * r) / 2 + 0.5;
           break;
         case 3:
-          // wrap fuction 2: magnifying len effect
+          // warp fuction 2: magnifying len effect
           uu = (u - 0.5) * 2;
           vv = (v - 0.5) * 2;
           r = pow((pow(uu, 2.0) + pow(vv, 2.0)), 0.5);
@@ -139,12 +139,12 @@ void wrapimage(int mode, double parameter)
       switch (mode)
       {
         case 1:
-          // wrap fuction 1
+          // warp fuction 1
           u = pow(x, 0.25);
           v = pow((sin(M_PI * y / 2)), 2.0);         
           break;
         case 2:
-          // wrap fuction 2: twirl image
+          // warp fuction 2: twirl image
           xx = ((x * scale_factor_x + x_min) - 0.5) * 2;
           yy = ((y * scale_factor_y + y_min) - 0.5) * 2;
 
@@ -154,7 +154,7 @@ void wrapimage(int mode, double parameter)
           v = (r * sin(a + twirl_f * r) / 2) + 0.5;
           break;
         case 3:
-          // wrap fuction 2: magnifying len effect
+          // warp fuction 2: magnifying len effect
           xx = ((x * scale_factor_x + x_min) - 0.5) * 2;
           yy = ((y * scale_factor_y + y_min) - 0.5) * 2;
           r = pow((pow(xx, 2.0) + pow(yy, 2.0)), 0.5);
@@ -277,7 +277,7 @@ void writeimage(string outfilename)
       out -> write_image(TypeDesc::UINT8, pixmap);
     }
 
-    cout << "Write the wraped image to image file " << outfilename << endl;
+    cout << "Write the warped image to image file " << outfilename << endl;
     // close the file and free the ImageOutput I created
     out -> close();
     delete out;
@@ -354,7 +354,7 @@ void handleReshape_out(int w, int h)  {handleReshape(w, h, xres_out, yres_out);}
 
 /*
 command line options parser
-  wrap input_image_name [output_image_name](optional) [wrap_mode] [wrap_parameter]
+  warp input_image_name [output_image_name](optional) [warp_mode] [warp_parameter]
   mode selection:     
     mode 1 - stretch image
     mode 2 - twirl image
@@ -384,8 +384,8 @@ void getCmdOptions(int argc, char* argv[], string &inputImage, string &outputIma
   else  
   {
     cout << "[HELP]" << endl;
-    cout << "[Usage] wrap input_image_name [output_image_name] [wrap_mode] [wrap_parameter]" << endl;
-    cout << "[wrap_mode] 1 - stretch image, 2 - twirl image, 3 - magnifying len effect. Only mode 2 has a wrap parameter." << endl;
+    cout << "[Usage] warp input_image_name [output_image_name] [warp_mode] [warp_parameter]" << endl;
+    cout << "[warp_mode] 1 - stretch image, 2 - twirl image, 3 - magnifying len effect. Only mode 2 has a warp parameter." << endl;
     exit(0);
   }
 }
@@ -407,8 +407,8 @@ int main(int argc, char* argv[])
   
   // read input image
   readimage(inputImage);
-  // wrap the original image
-  wrapimage(mode, parameter);
+  // warp the original image
+  warpimage(mode, parameter);
   // write out to an output image file
   if (outputImage != "") {writeimage(outputImage);}
   
@@ -429,7 +429,7 @@ int main(int argc, char* argv[])
 
   // second window: output image
   glutInitWindowSize(xres_out, yres_out);
-  glutCreateWindow("Wrapped Image");
+  glutCreateWindow("Warped Image");
   // set up the callback routines to be called when glutMainLoop() detects an event
   glutDisplayFunc(displayOutput);	  // display callback
   glutMouseFunc(mouseClick);  // mouse callback
