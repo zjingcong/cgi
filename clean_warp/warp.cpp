@@ -62,6 +62,7 @@ scale factor calculator
 */
 void scale_factor(double x, double y, double &scale_factor_x, double &scale_factor_y)
 {
+  // calculate four corners of one pixel
   float u0, v0, u1, v1, u2, v2, u3, v3;
   inv_map(x - 0.5, y - 0.5, u0, v0, xres, yres, xres_out, yres_out);
   inv_map(x + 0.5, y - 0.5, u1, v1, xres, yres, xres_out, yres_out);
