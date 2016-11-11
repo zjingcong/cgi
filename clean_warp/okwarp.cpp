@@ -1,3 +1,36 @@
+/*
+OpenGL and GLUT program to warp an input image using inverse mapping from two different warp functions, 
+with fixing the minification using adaptive supersampling and magnification problems using bilinear interpolation, 
+display the input image and output image, and then optionally write out to an image file.
+Users can select warp mode to decide methods taken to clean the warp and warp functions by command lines.
+
+Usage: 
+  warp input_image_name [output_image_name]
+    -m mode selection: 0-4
+    -w warp function selection: 0-1
+  mode selection:
+    1: general warp
+    2: warp with clean method supersampling for minification
+    3: warp with clean method adaptive supersampling for minification
+    4: warp with clean method bilinear interpolation for magnification
+    0: all clean warp (adaptive supersampling + bilinear interpolation)
+    default mode: 0
+  warp function selection:
+    0: dr.house's warp function
+    1: my warp function
+
+Mouse Response:
+  click the window to quit the program
+
+Keyboard Response:
+  Press q, Q or exit to quit the program
+
+Jingcong Zhang
+jingcoz@g.clemson.edu
+2016-11-10
+*/
+
+
 # include <OpenImageIO/imageio.h>
 # include <stdlib.h>
 # include <cstdlib>
@@ -58,7 +91,7 @@ void inv_map(float x, float y, float &u, float &v, int inwidth, int inheight, in
       v = 0.5 * (1 + sin(y * PI));  // inverse in y direction is offset sine
       break;
     case 1:
-      u = pow(x, 0.25);
+      u = pow(x, 0.7);
       v = pow((sin(M_PI * y / 2)), 2.0);
       break;
     default:
@@ -437,12 +470,23 @@ void writeimage(string outfilename)
     cerr << "Could not create output image for " << outfilename << ", error = " << geterror() << endl;
   }
   else
-  {   
+  {
+    // modify the pixmap: upside down the image
+    unsigned char outmap [xres_out * yres_out * 4];
+    for (int row = 0; row < yres_out; row++)
+    {
+      for (int col = 0; col < xres_out; col++)
+      {
+        for (int k = 0; k < 4; k++)
+        {outmap[(row * xres + col) * 4 + k] = outputpixmap[((yres - 1 - row) * xres + col) * 4 + k];}
+      }
+    }
+
     // open and prepare the image file
     ImageSpec spec (xres_out, yres_out, 4, TypeDesc::UINT8);
     out -> open(outfilename, spec);
     // write the entire image
-    out -> write_image(TypeDesc::UINT8, outputpixmap);
+    out -> write_image(TypeDesc::UINT8, outmap);
 
     // .ppm file: 3 channels
     if (outfilename.substr(outfilename.find_last_of(".") + 1, outfilename.length() - 1) == "ppm")
@@ -453,7 +497,7 @@ void writeimage(string outfilename)
         for (int col = 0; col < xres_out; col++)
         {
           for (int k = 0; k < 3; k++)
-          {pixmap[(row * xres_out + col) * 3 + k] = outputpixmap[(row * xres_out + col) * 4 + k];}
+          {pixmap[(row * xres_out + col) * 3 + k] = outmap[(row * xres_out + col) * 4 + k];}
         }
       }
       ImageSpec spec (xres_out, yres_out, 3, TypeDesc::UINT8);

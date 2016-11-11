@@ -1,0 +1,35 @@
+Clean Warp
+-------------------------------
+| Name: Jingcong Zhang         |
+| Email: jingcoz@g.clemson.edu |
+| Date: 2016-11-10             |
+-------------------------------
+This program is to warp an input image using inverse mapping from two different warp functions, 
+with fixing the minification using adaptive supersampling and magnification problems using bilinear interpolation, 
+display the input image and output image, and then optionally write out to an image file.
+Users can select warp mode to decide methods taken to clean the warp and warp functions by command lines.
+
+The warp in this program have one area where the image is being magnified and another is being minified.
+Users can easily compare the differences between using different clean methods.
+
+Usage: 
+  warp input_image_name [output_image_name]
+    -m mode selection: 0-4
+    -w warp function selection: 0-1
+  mode selection:
+    1: general warp
+    2: warp with clean method supersampling for minification
+    3: warp with clean method adaptive supersampling for minification
+    4: warp with clean method bilinear interpolation for magnification
+    0: all clean warp (adaptive supersampling + bilinear interpolation)
+    default mode: 0
+  warp function selection:
+    0: dr.house's warp function
+    1: my warp function
+
+Mouse Response:
+  click the window to quit the program
+
+Keyboard Response:
+  Press q, Q or exit to quit the program
+
