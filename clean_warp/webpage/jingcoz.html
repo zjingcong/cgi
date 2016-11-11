@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h1 style="font-family:Arial;text-align:center;"><b>Clean Warp Results</b></h1>
+<p style="font-family:courier,Arial;text-align:center;">Jingcong Zhang</p>
+<p style="font-family:courier,Arial;text-align:center;">2016-11-10</p>
+
+<hr style="font-family: Helvetica,Arial,sans-serif;">
+<h4 style="font-family:Arial;text-align:left;"><b>Okwarp Warp Function</b></h4>
+<h4 style="font-family:Arial;text-align:left;">Example 1</h4>
+<table border="0" cellpadding="2" cellspacing="2" width="100%" style="font-family:courier,monospace;">
+  <tbody>
+    <tr>
+      <td valign="top" align="center"><img src="construction.png" width = "600">
+        <br>
+        original image<br>
+      </td>
+      <td valign="top" align="center"><img src="cons_1.png" width = "600">
+        <br>
+        general warp<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top" align="center"><img src="cons_2.png" width = "600">
+        <br>
+        simple supersampling<br>
+      </td>
+      <td valign="top" align="center"><img src="cons_3.png" width = "600">
+        <br>
+        adaptive supersampling<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top" align="center"><img src="cons_4.png" width = "600">
+        <br>
+        bilinear interpolation<br>
+      </td>
+      <td valign="top" align="center"><img src="cons_all.png" width = "600">
+        <br>
+        all clean: adaptive supersampling + bilinear interpolation<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 style="font-family:Arial;text-align:left;">Example 2</h4>
+<table border="0" cellpadding="2" cellspacing="2" width="100%" style="font-family:courier,monospace;">
+  <tbody>
+    <tr>
+      <td valign="top" align="center"><img src="back_5cm_1.png" width = "600">
+        <br>
+        original image<br>
+      </td>
+      <td valign="top" align="center"><img src="5cm_1.png" width = "600">
+        <br>
+        general warp<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top" align="center"><img src="5cm_2.png" width = "600">
+        <br>
+        simple supersampling<br>
+      </td>
+      <td valign="top" align="center"><img src="5cm_3.png" width = "600">
+        <br>
+        adaptive supersampling<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top" align="center"><img src="5cm_4.png" width = "600">
+        <br>
+        bilinear interpolation<br>
+      </td>
+      <td valign="top" align="center"><img src="5cm_all.png" width = "600">
+        <br>
+        all clean: adaptive supersampling + bilinear interpolation<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+<p>
+We can definitely tell the difference between general warp image and all clean warp image. Bilinear interpolation can eliminate jaggies in the warp image. And adaptive supersampling can remain more details in minified area than supersampling, while supersampling is better than general warp. Even though we can hardly find the difference between supersampling and adaptive supersampling, there it is, especailly in the trees area in example 2, when comparing carefully.
+</p>
+<br>
+<hr style="font-family: Helvetica,Arial,sans-serif;">
+<h4 style="font-family:Arial;text-align:left;"><b>Another Warp Function</b></h4>
+<div align="center">
+<table border="0" cellpadding="5" cellspacing="5" width="25%" style="font-family:courier,monospace;">
+  <tbody>
+    <tr>
+      <td valign="top" align="left">
+        <b>inverse map: <br>
+        <b>u = pow(x, 0.7)<br>
+        <b>v = (sin((pi/2) * y))^2<br>
+    </tr>
+  </tbody>
+</table>
+</div>
+<h4 style="font-family:Arial;text-align:left;">Example 1</h4>
+<table border="0" cellpadding="2" cellspacing="2" width="100%" style="font-family:courier,monospace;">
+  <tbody>
+    <tr>
+      <td valign="top" align="center"><img src="construction.png">
+        <br>
+        original image<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top" align="center"><img src="cons2_no.png">
+        <br>
+        general warp<br>
+    </tr>
+    <tr>
+      <td valign="top" align="center"><img src="cons2.png">
+        <br>
+        all clean warp<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 style="font-family:Arial;text-align:left;">Example 2</h4>
+<table border="0" cellpadding="2" cellspacing="2" width="100%" style="font-family:courier,monospace;">
+  <tbody>
+    <tr>
+      <td valign="top" align="center"><img src="back_5cm_1.png">
+        <br>
+        original image<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top" align="center"><img src="5cm2_no.png">
+        <br>
+        general warp<br>
+    </tr>
+    <tr>
+      <td valign="top" align="center"><img src="5cm2.png">
+        <br>
+        all clean warp<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+
+</body>
+</html>

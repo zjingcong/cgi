@@ -5,7 +5,7 @@ display the input image and output image, and then optionally write out to an im
 Users can select warp mode to decide methods taken to clean the warp and warp functions by command lines.
 
 Usage: 
-  warp input_image_name [output_image_name]
+  okwarp input_image_name [output_image_name]
     -m mode selection: 0-4
     -w warp function selection: 0-1
   mode selection:

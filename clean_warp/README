@@ -12,8 +12,15 @@ Users can select warp mode to decide methods taken to clean the warp and warp fu
 The warp in this program have one area where the image is being magnified and another is being minified.
 Users can easily compare the differences between using different clean methods.
 
+The program will do supersampling or adaptive supersampling for pixels being minified 
+and do bilinear interpolation for those being magnified.
+
+For all clean warp, the program will take adaptive supersampling method when calculate minified area, 
+take bilinear interpolation method when calculate magnified area, 
+and take both methods when the pixel being minified in one direction and magnified in the other direction.
+
 Usage: 
-  warp input_image_name [output_image_name]
+  okwarp input_image_name [output_image_name]
     -m mode selection: 0-4
     -w warp function selection: 0-1
   mode selection:
