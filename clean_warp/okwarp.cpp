@@ -53,7 +53,8 @@ jingcoz@g.clemson.edu
 # define PI 3.1415926536
 # endif
 
-# define SAMPLING_TH 65
+# define SAMPLING_TH 65 // predefined adaptive supersampling threshold, 
+                        // decided from the difference between each samples and their average when testing
 
 using namespace std;
 OIIO_NAMESPACE_USING
@@ -86,10 +87,12 @@ void inv_map(float x, float y, float &u, float &v, int inwidth, int inheight, in
 
   switch (warp_id)
   {
+    // dr.house's warp function
     case 0:
       u = sqrt(x);			        // inverse in x direction is sqrt
       v = 0.5 * (1 + sin(y * PI));  // inverse in y direction is offset sine
       break;
+    // my warp function
     case 1:
       u = pow(x, 0.7);
       v = pow((sin(M_PI * y / 2)), 2.0);
@@ -114,6 +117,8 @@ scale factor calculator
 */
 void scale_factor(double x, double y, double &scale_factor_x, double &scale_factor_y)
 {
+  // calculate four corners of one output pixel value in the input image
+  // in order to calculate scale factor in each direction (x direction and y direction)
   float u0, v0, u1, v1, u2, v2, u3, v3;
   inv_map(x - 0.5, y - 0.5, u0, v0, xres, yres, xres_out, yres_out);
   inv_map(x + 0.5, y - 0.5, u1, v1, xres, yres, xres_out, yres_out);
@@ -132,6 +137,7 @@ bilinear interpolation
 */
 unsigned char bilinear_interpolation(double u, double v, int row_out, int col_out, int channel, unsigned char pixmap[])
 {
+  // calculate the positions of four points to do the bilinear interpolation
   double u0, v0, u1, v1, u2, v2, u3, v3, s, t;
   u0 = (u >= (floor(u) + 0.5)) ? (floor(u) + 0.5) : (floor(u) - 0.5);
   v0 = (v >= (floor(v) + 0.5)) ? (floor(v) + 0.5) : (floor(v) - 0.5);
@@ -157,6 +163,7 @@ unsigned char bilinear_interpolation(double u, double v, int row_out, int col_ou
   u3 = u0 + 1;
   v3 = v0 + 1;
 
+  // get the color of four points
   double c0, c1, c2, c3;
   unsigned char c_out;
   c0 = pixmap[(int(floor(v0)) * xres + int(floor(u0))) * 4 + channel];
@@ -178,6 +185,7 @@ void supersampling(int row_in, int col_in, unsigned char super_inputpixmap[])
   double weight_list[] = {1.0, 2.0, 1.0, 
                           2.0, 8.0, 2.0, 
                           1.0, 2.0, 1.0};
+  // get the multisamples
   int index_list [9] = {0};
   int index = 0;
   for (int i = -1; i <= 1; ++i)
@@ -186,10 +194,12 @@ void supersampling(int row_in, int col_in, unsigned char super_inputpixmap[])
     {
       if ((row_in + i) < yres && (row_in + i) >= 0 && (col_in + j) < xres && (col_in + j) >= 0)
         {index_list[index] = (row_in + i) * xres + (col_in + j);}
+      // exclude samples located input image's outside
       else {index_list[index] = -1;}
       index++;
     }
   }
+  // calculate the area average with weights predefined in weight_list
   for (int channel = 0; channel < 4; channel++)
   {
     double weight_count = 0;
@@ -210,7 +220,8 @@ void supersampling(int row_in, int col_in, unsigned char super_inputpixmap[])
 
 
 /*
-adaptive super sampling
+minification fix: 
+adaptive supersampling
 */
 void ad_supersampling(int row_in, int col_in, unsigned char adsuper_inputpixmap[])
 {
@@ -245,7 +256,7 @@ void ad_supersampling(int row_in, int col_in, unsigned char adsuper_inputpixmap[
       }
     }
     double sample_avg = sample_sum / sample_count;
-    // exclude extreme pixel
+    // exclude extreme pixel which have a larger difference from average value than predefined threshold
     for (int i = 0; i < 9; i++)
     {
       if (index_list[i] != -1)
@@ -289,13 +300,14 @@ void warpimage()
   // fill the output image with a clear transparent color(0, 0, 0, 0)
   for (int i = 0; i < xres_out * yres_out * 4; i++) {outputpixmap[i] = 0;}
 
-  // supersampling
+  // supersampling & adaptive supersampling
   unsigned char super_inputpixmap[xres * yres * 4];
   unsigned char adsuper_inputpixmap[xres * yres * 4];
   for (int row_in = 0; row_in < yres; row_in++)
   {
     for (int col_in = 0; col_in < xres; col_in++)
       {
+        // supersampling
         supersampling(row_in, col_in, super_inputpixmap);
         // adaptive supersampling
         ad_supersampling(row_in, col_in, adsuper_inputpixmap);
@@ -363,6 +375,7 @@ void warpimage()
                 if (scale_factor_x < 1 && scale_factor_y < 1)
                   {outputpixmap[(row_out * xres_out + col_out) * 4 + k] 
                     = bilinear_interpolation(u, v, row_out, col_out, k, inputpixmap);}
+                // pixel is minified in one direction and magnified in the other direction
                 else
                   {outputpixmap[(row_out * xres_out + col_out) * 4 + k] 
                     = bilinear_interpolation(u, v, row_out, col_out, k, adsuper_inputpixmap);}
