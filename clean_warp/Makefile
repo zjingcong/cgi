@@ -12,7 +12,7 @@ else
   endif
 endif
 
-PROJECT		= warp
+PROJECT		= okwarp
 
 ${PROJECT}:	${PROJECT}.o
 	${CC} ${LFLAGS} -o ${PROJECT} ${PROJECT}.o ${LDFLAGS}
