@@ -20,6 +20,8 @@
 # define PI 3.1415926536
 # endif
 
+# define SAMPLING_TH 65
+
 using namespace std;
 OIIO_NAMESPACE_USING
 
@@ -29,6 +31,8 @@ static unsigned char *outputpixmap; // output image pixels pixmap
 static int xres, yres;  // input image size: width, height
 static int xres_out, yres_out;  // output image size: width, height
 int mode; // mode 1: general warp, mode 2: supersampling, mode 3: supersampling + bilinear interpolation
+
+int ex_samples = 0;
 
 
 /*
@@ -128,11 +132,10 @@ supersampling
 void supersampling(int row_in, int col_in, unsigned char super_inputpixmap[])
 {
   double weight_list[] = {1.0, 2.0, 1.0, 
-                          2.0, 4.0, 2.0, 
+                          2.0, 8.0, 2.0, 
                           1.0, 2.0, 1.0};
   int index_list [9] = {0};
   int index = 0;
-  // cout << "row_in = " << row_in << " col_in = " << col_in << endl;
   for (int i = -1; i <= 1; ++i)
   {
     for (int j = -1; j <= 1; ++j)
@@ -143,13 +146,11 @@ void supersampling(int row_in, int col_in, unsigned char super_inputpixmap[])
       index++;
     }
   }
-  // for (int i = 0; i < 9; ++i) {cout << index_list[i] << " ";} cout << endl;
   for (int channel = 0; channel < 4; channel++)
   {
     double weight_count = 0;
     double sum = 0;
     unsigned char c_out;
-    // cout << channel << endl;
     for (int i = 0; i < 9; ++i)
     {
       if (index_list[i] != -1)
@@ -160,6 +161,73 @@ void supersampling(int row_in, int col_in, unsigned char super_inputpixmap[])
     }
     c_out = sum / weight_count;
     super_inputpixmap[(row_in * xres + col_in) * 4 + channel] = c_out;
+  }
+}
+
+
+/*
+adaptive super sampling
+*/
+void ad_supersampling(int row_in, int col_in, unsigned char adsuper_inputpixmap[])
+{
+  double weight_list[] = {1.0, 2.0, 1.0, 
+                          2.0, 8.0, 2.0, 
+                          1.0, 2.0, 1.0};
+  int index_list [9] = {0};
+  int index = 0;
+  for (int i = -1; i <= 1; ++i)
+  {
+    for (int j = -1; j <= 1; ++j)
+    {
+      if ((row_in + i) < yres && (row_in + i) >= 0 && (col_in + j) < xres && (col_in + j) >= 0)
+        {index_list[index] = (row_in + i) * xres + (col_in + j);}
+      // exclude samples located input image's outside
+      else {index_list[index] = -1;}
+      index++;
+    }
+  }
+  
+  for (int channel = 0; channel < 4; channel++)
+  {
+    // calculate samples average value
+    double sample_sum = 0;
+    double sample_count = 0;
+    for (int i = 0; i < 9; i++)
+    {
+      if (index_list[i] != -1)
+      {
+        sample_sum += inputpixmap[index_list[i] * 4 + channel];
+        sample_count++;
+      }
+    }
+    double sample_avg = sample_sum / sample_count;
+    // exclude extreme pixel
+    for (int i = 0; i < 9; i++)
+    {
+      if (index_list[i] != -1)
+      {
+        double diff = abs(inputpixmap[index_list[i] * 4 + channel] - sample_avg);
+        if (diff > SAMPLING_TH) {index_list[i] = -1; ex_samples++;}
+      }
+    }
+  }
+
+  // calculate the area average with weights
+  for (int channel = 0; channel < 4; channel++)
+  {
+    double weight_count = 0;
+    double sum = 0;
+    unsigned char c_out;
+    for (int i = 0; i < 9; ++i)
+    {
+      if (index_list[i] != -1)
+      {
+        sum += weight_list[i] * inputpixmap[index_list[i] * 4 + channel];
+        weight_count += weight_list[i];
+      }
+    }
+    c_out = sum / weight_count;
+    adsuper_inputpixmap[(row_in * xres + col_in) * 4 + channel] = c_out;
   }
 }
 
@@ -179,11 +247,17 @@ void warpimage()
 
   // supersampling
   unsigned char super_inputpixmap[xres * yres * 4];
+  unsigned char adsuper_inputpixmap[xres * yres * 4];
   for (int row_in = 0; row_in < yres; row_in++)
   {
     for (int col_in = 0; col_in < xres; col_in++)
-      {supersampling(row_in, col_in, super_inputpixmap);}
+      {
+        supersampling(row_in, col_in, super_inputpixmap);
+        // adaptive supersampling
+        ad_supersampling(row_in, col_in, adsuper_inputpixmap);
+      }
   }
+  cout << "ex_samples_avg: " << float(ex_samples) / (xres * yres * 4) << endl;
 
   // inverse map
   float x, y, u, v;
@@ -200,6 +274,7 @@ void warpimage()
       inv_map(x, y, u, v, xres, yres, xres_out, yres_out);
       // calculate scale factor
       scale_factor(x, y, scale_factor_x, scale_factor_y);
+      if (y == 217.5 && x == 600.5) {cout << scale_factor_x << " " << scale_factor_y << endl;}
 
       if (u < xres && v < yres && u >= 0 && v >= 0)
       {
@@ -211,26 +286,52 @@ void warpimage()
         {
           switch (mode)
           {
-            case 0:
+            // general warp
+            case 1:
               outputpixmap[(row_out * xres_out + col_out) * 4 + k] = inputpixmap[(row_in * xres + col_in) * 4 + k];
               break;
-            case 1:
-              outputpixmap[(row_out * xres_out + col_out) * 4 + k] = super_inputpixmap[(row_in * xres + col_in) * 4 + k];
-              break;
+
+            // supersampling for minification
             case 2:
-              // magnification
+              if (scale_factor_x > 1 || scale_factor_y > 1)
+                {outputpixmap[(row_out * xres_out + col_out) * 4 + k] = super_inputpixmap[(row_in * xres + col_in) * 4 + k];}
+              else {outputpixmap[(row_out * xres_out + col_out) * 4 + k] = inputpixmap[(row_in * xres + col_in) * 4 + k];}
+              break;
+
+            // adaptive supersampling for minification
+            case 3:
+              if (scale_factor_x > 1 || scale_factor_y > 1)
+                {outputpixmap[(row_out * xres_out + col_out) * 4 + k] = adsuper_inputpixmap[(row_in * xres + col_in) * 4 + k];}
+              else {outputpixmap[(row_out * xres_out + col_out) * 4 + k] = inputpixmap[(row_in * xres + col_in) * 4 + k];}
+              break;
+
+            // bilinear interpolation for magnification
+            case 4:
               if (scale_factor_x < 1 || scale_factor_y < 1)
                 {outputpixmap[(row_out * xres_out + col_out) * 4 + k] 
                 = bilinear_interpolation(u, v, row_out, col_out, k, inputpixmap);}
               else  {outputpixmap[(row_out * xres_out + col_out) * 4 + k] = inputpixmap[(row_in * xres + col_in) * 4 + k];}
               break;
-            case 3:
+
+            // all clean warp            
+            case 0:
               // magnification
               if (scale_factor_x < 1 || scale_factor_y < 1)
-                {outputpixmap[(row_out * xres_out + col_out) * 4 + k] 
-                = bilinear_interpolation(u, v, row_out, col_out, k, super_inputpixmap);}
-              else  {outputpixmap[(row_out * xres_out + col_out) * 4 + k] = super_inputpixmap[(row_in * xres + col_in) * 4 + k];}
+              {
+                if (scale_factor_x < 1 && scale_factor_y < 1)
+                  {outputpixmap[(row_out * xres_out + col_out) * 4 + k] 
+                    = bilinear_interpolation(u, v, row_out, col_out, k, inputpixmap);}
+                else
+                  {outputpixmap[(row_out * xres_out + col_out) * 4 + k] 
+                    = bilinear_interpolation(u, v, row_out, col_out, k, adsuper_inputpixmap);}
+              }
+              else if (scale_factor_x == 1 && scale_factor_y == 1)
+                {outputpixmap[(row_out * xres_out + col_out) * 4 + k] = inputpixmap[(row_in * xres + col_in) * 4 + k];}
+              // minification
+              else
+                {outputpixmap[(row_out * xres_out + col_out) * 4 + k] = adsuper_inputpixmap[(row_in * xres + col_in) * 4 + k];}
               break;
+
             default:
               return;
           }
@@ -422,11 +523,12 @@ command line options parser
 char **getIter(char** begin, char** end, const std::string& option) {return find(begin, end, option);}
 void getCmdOptions(int argc, char* argv[], string &inputImage, string &outputImage, int &mode)
 {
-  string mode_list[4];
-  mode_list[0] = "general warp";
-  mode_list[1] = "warp with clean method supersampling";
-  mode_list[2] = "warp with clean method bilinear interpolation";
-  mode_list[3] = "all clean warp (supersampling + bilinear interpolation)";
+  string mode_list[10];
+  mode_list[1] = "general warp";
+  mode_list[2] = "warp with clean method supersampling for minification";
+  mode_list[3] = "warp with clean method adaptive supersampling for minification";
+  mode_list[4] = "warp with clean method bilinear interpolation for magnification";
+  mode_list[0] = "all clean warp (adaptive supersampling + bilinear interpolation)";
   if (argc >= 2)
   {
     inputImage = argv[1];
@@ -438,7 +540,7 @@ void getCmdOptions(int argc, char* argv[], string &inputImage, string &outputIma
     }
     else
     {
-      mode = 3; // default mode: all clean warp (supersampling + bilinear interpolation)
+      mode = 0; // default mode: all clean warp (supersampling + bilinear interpolation)
       if (argc >= 3)  {outputImage = argv[2];}
     }
     cout << "warp mode " << mode << ": " << mode_list[mode] << endl;
@@ -447,10 +549,12 @@ void getCmdOptions(int argc, char* argv[], string &inputImage, string &outputIma
   {
     cout << "[HELP]" << endl;
     cout << "warp input_image_name [output_image_name] -m [mode]" << endl;
-    cout << " - mode 0: general warp\n"
-         << " - mode 1: warp with clean method supersampling\n"
-         << " - mode 2: warp with clean method bilinear interpolation\n"
-         << " - mode 3: default mode, all clean warp (supersampling + bilinear interpolation)" 
+    cout << " - mode 1: " << mode_list[1] << "\n"
+         << " - mode 2: " << mode_list[2] << "\n"
+         << " - mode 3: " << mode_list[3] << "\n"
+         << " - mode 4: " << mode_list[4] << "\n"
+         << " - mode 0: " << mode_list[0] << "\n"
+         << "default mode: mode 0"
          << endl;
   }
 }
