@@ -22,7 +22,7 @@
 using namespace std;
 OIIO_NAMESPACE_USING
 
-# define PIECE_SCALE 100.000
+# define PIECE_SCALE 10.00
 # define max(x, y) (x > y ? x : y)
 # define min(x, y) (x < y ? x : y)
 
@@ -34,6 +34,10 @@ static int xres, yres;  // input image size: width, height
 static int xres_out, yres_out;  // output image size: width, height
 static int img_time;
 static pieceXform *piece_list;
+
+
+void readimage(string infilename);
+void writeimage(string outfilename);
 
 
 void getCmdOptions(int argc, char **argv, string &inputImage, string &outputImage)
@@ -51,11 +55,61 @@ void getCmdOptions(int argc, char **argv, string &inputImage, string &outputImag
 }
 
 
+void preprocessing()
+{
+  // read input image
+  readimage(inputImage);
+  // allocate memory for output image
+  xres_out = xres;
+  yres_out = yres;
+  outputpixmap = new unsigned char [xres_out * yres_out * 4];
+  // green screen alpha mask generation
+  alphamask(xres, yres, inputpixmap, outputpixmap);
+  // write out the image
+  writeimage("alphamask.png");
+  // update display image
+  readimage("alphamask.png");
+  for (int i = 0; i < xres * yres * 4; i++)
+  {outputpixmap[i] = inputpixmap[i];}
+}
+
+
+void disolvepieces()
+{
+  int x_num, y_num;
+  x_num = ceil(xres / double(PIECE_SCALE));
+  y_num = ceil(yres / double(PIECE_SCALE));
+
+  cout << "x_num: " << x_num << " y_num: " << y_num << endl;
+
+  piece_list = new pieceXform [x_num * y_num];
+  for (int i = 0; i < x_num; ++i)
+  {
+    for (int j = 0; j < y_num; ++j)
+    {
+      int px = i * PIECE_SCALE;
+      int py = j * PIECE_SCALE;
+      int id = j * x_num + i;
+      if (i < x_num - 1 && j < y_num - 1)
+      {piece_list[id] = pieceXform(id, PIECE_SCALE, PIECE_SCALE, px, py, -1);}
+      else
+      {
+        int pxres = xres - (x_num - 1) * PIECE_SCALE;
+        int pyres = yres - (y_num - 1) * PIECE_SCALE;
+        piece_list[id] = pieceXform(id, pxres, pyres, px, py, -1);
+      }
+    }
+  }
+}
+
+
 void motionSummary()
 {
-  cout << "motionsummary" << endl;
+  for (int i = 0; i < xres * yres * 4; i++)
+  {outputpixmap[i] = inputpixmap[i];}
+
   if (piece_list[8].life_time < 0)  {piece_list[8].setLifetime(1);}
-  piece_list[8].xformSetting(400, 400, 0);
+  piece_list[8].xformSetting(10, 10, 0.001);
   // unsigned char input [xres * yres * 4];
   // for (int i = 0; i < xres * yres * 4; ++i) {input[i] = outputpixmap[i];}
   piece_list[8].piecemotion(inputpixmap, outputpixmap, xres, yres);
@@ -275,54 +329,6 @@ void handleReshape(int w, int h, int img_width, int img_height)
 // handleReshape_in for input window, handleReshape_out for output window: input image size may be different from output image size
 void handleReshape_in(int w, int h) {handleReshape(w, h, xres, yres);}
 void handleReshape_out(int w, int h)  {handleReshape(w, h, xres_out, yres_out);}
-
-
-void preprocessing()
-{
-  // read input image
-  readimage(inputImage);
-  // allocate memory for output image
-  xres_out = xres;
-  yres_out = yres;
-  outputpixmap = new unsigned char [xres_out * yres_out * 4];
-  // green screen alpha mask generation
-  alphamask(xres, yres, inputpixmap, outputpixmap);
-  // write out the image
-  writeimage("alphamask.png");
-  // update display image
-  readimage("alphamask.png");
-  for (int i = 0; i < xres * yres * 4; i++)
-  {outputpixmap[i] = inputpixmap[i];}
-}
-
-
-void disolvepieces()
-{
-  int x_num, y_num;
-  x_num = ceil(xres / double(PIECE_SCALE));
-  y_num = ceil(yres / double(PIECE_SCALE));
-
-  cout << "x_num: " << x_num << " y_num: " << y_num << endl;
-
-  piece_list = new pieceXform [x_num * y_num];
-  for (int i = 0; i < x_num; ++i)
-  {
-    for (int j = 0; j < y_num; ++j)
-    {
-      int px = i * PIECE_SCALE;
-      int py = j * PIECE_SCALE;
-      int id = j * x_num + i;
-      if (i < x_num - 1 && j < y_num - 1)
-      {piece_list[id] = pieceXform(id, PIECE_SCALE, PIECE_SCALE, px, py, -1);}
-      else
-      {
-        int pxres = xres - (x_num - 1) * PIECE_SCALE;
-        int pyres = yres - (y_num - 1) * PIECE_SCALE;
-        piece_list[id] = pieceXform(id, pxres, pyres, px, py, -1);
-      }
-    }
-  }
-}
 
 
 /*

@@ -23,7 +23,8 @@
 using namespace std;
 OIIO_NAMESPACE_USING
 
-# define SCALE_RATE 1
+# define SCALE_RATE 0.9
+# define LIFE_MAX 20
 # define max(x, y) (x > y ? x : y)
 # define min(x, y) (x < y ? x : y)
 
@@ -142,18 +143,6 @@ void pieceXform::generateMatrix(char tag, double p1, double p2)
       return;
   }
   transMatrix_tmp = xform * transMatrix_tmp;
-//  if (tag != 't')
-//  {
-//    double tmp_x, tmp_y;
-//    tmp_x = (transMatrix * inputxycorners[0]).x;
-//    tmp_y = (transMatrix * inputxycorners[0]).y;
-//    Matrix3D xform_extra;
-//    double tx = -tmp_x + inputxycorners[0].x;
-//    double ty = -tmp_y + inputxycorners[0].y;
-//    xform_extra[0][2] = tx;
-//    xform_extra[1][2] = ty;
-//    transMatrix = xform_extra * transMatrix;
-//  }
 }
 
 
@@ -172,12 +161,6 @@ void pieceXform::boundingbox()
   u3.x = pxres;
   u3.y = 0;
 
-//  u0 = inputxycorners[0];
-//  u1 = inputxycorners[1];
-//  u2 = inputxycorners[2];
-//  u3 = inputxycorners[3];
-
-  //Vector2D xy0, xy1, xy2, xy3;
   xycorners[0] = transMatrix_tmp * u0;
   xycorners[1] = transMatrix_tmp * u1;
   xycorners[2] = transMatrix_tmp * u2;
@@ -217,12 +200,9 @@ void pieceXform::boundingbox()
 
 void pieceXform::pieceUpdate()
 {
+  transMatrix_tmp.setidentity();
+  transMatrix.setidentity();
   life_time++;
-//  pxres = out_pxres;
-//  pyres = out_pyres;
-//  px = out_px;
-//  py = out_py;
-//  getinputcorners();
 }
 
 
@@ -259,11 +239,11 @@ void pieceXform::inversemap(unsigned char *inputpixmap, unsigned char *outputpix
         {
           for (int k = 0; k < 4; k++)
           {outputpixmap[(row_out * pic_xres + col_out) * 4 + k] = inputpixmap[(row_in * pic_xres + col_in) * 4 + k];}
-//          if (outputpixmap[(row_out * pic_xres + col_out) * 4 + 3] == 0)
-//          {
-//            for (int k = 0; k < 4; k++)
-//            {outputpixmap[(row_out * pic_xres + col_out) * 4 + k] = inputpixmap[(row_out * pic_xres + col_out) * 4 + k];}
-//          }
+          if (outputpixmap[(row_out * pic_xres + col_out) * 4 + 3] == 0)
+          {
+            for (int k = 0; k < 4; k++)
+            {outputpixmap[(row_out * pic_xres + col_out) * 4 + k] = inputpixmap[(row_out * pic_xres + col_out) * 4 + k];}
+          }
         }
 //        else
 //        {
@@ -285,27 +265,24 @@ void pieceXform::piecemotion(unsigned char *inputpixmap, unsigned char *outputpi
     double rotation, scale_factor, transx, transy;
 
     srand(time(NULL));
-    rotation = rand() % (40);
-//
-//    scale_factor = SCALE_RATE * life_time;
-//    transx = life_time * v_x;
-//    transy = life_time * v_y;
 
-    rotation = 0;
-    scale_factor = 0.9;
-    transx = transy = 10;
-    cout << "transparameter: " << rotation << " " << scale_factor << " " << transx << " " << transy << endl;
+    rotation = rand() % (360);
+    scale_factor = pow(SCALE_RATE, double(life_time));
+    transx = life_time * v_x;
+    transy = life_time * v_y;
+
+    cout << "transparameter: " << rotation << " " << scale_factor << " " << transx << " " << transy << " " << perspective_distance << endl;
 
     generateMatrix('s', scale_factor, scale_factor);
     generateMatrix('r', rotation, 0);
     generateMatrix('t', transx, transy);
-    generateMatrix('p', perspective_distance, 0);
+    // generateMatrix('p', perspective_distance, 0);
+    generateMatrix('h', 0.5, 1);
     boundingbox();
     transMatrix.print();
     inversemap(inputpixmap, outputpixmap, pic_xres, pic_yres);
+
     cout << "input: " << px << " " << py << " " << pxres << " " << pyres << endl;
     cout << "output: " << out_px << " " << out_py << " " << out_pxres << " " << out_pyres << endl;
-    // transMatrix.setidentity();
-    // pieceUpdate();
   }
 }
