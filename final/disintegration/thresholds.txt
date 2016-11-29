@@ -1,0 +1,2 @@
+115 160   0.4 1       0.3 1   110 180
+hue_low   saturation  value   hue_high
