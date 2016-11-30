@@ -10,6 +10,7 @@
 # include <math.h>
 # include <cmath>
 # include <iomanip>
+# include "time.h"
 
 # include "disolvefx.h"
 
@@ -24,25 +25,31 @@ using namespace std;
 OIIO_NAMESPACE_USING
 
 # define SCALE_RATE 0.9
-# define LIFE_MAX 20
+# define LIFE_MAX 25
 # define max(x, y) (x > y ? x : y)
 # define min(x, y) (x < y ? x : y)
 
 
-pieceXform::pieceXform(int id, int a, int b, int c, int d, int e)
+pieceXform::pieceXform(int id, int id_x, int id_y, int a, int b, int c, int d, int e)
 {
+  srand(time(NULL));
+
   pieceid = id;
+  pieceid_x = id_x;
+  pieceid_y = id_y;
   pxres = a;
   pyres = b;
   px = c;
   py = d;
   life_time = e;
+  life_start_time = -1;
 
   getinputcorners();
 }
 
 
 void pieceXform::setLifetime(int t) {life_time = t;}
+void pieceXform::setStarttime(int t)  {life_start_time = t;}
 
 
 void pieceXform::xformSetting(double vx, double vy, double distance)
@@ -55,8 +62,9 @@ void pieceXform::xformSetting(double vx, double vy, double distance)
 
 void pieceXform::makehole(unsigned char *outputpixmap, int pic_xres)
 {
-  if (life_time >= 0)
+  if (life_time != -1)
   {
+    cout << "makehole_life_time: " << life_time << endl;
     for (int row_in = py; row_in < py + pyres; row_in++)
     {
       for (int col_in = px; col_in < px + pxres; col_in++)
@@ -202,7 +210,8 @@ void pieceXform::pieceUpdate()
 {
   transMatrix_tmp.setidentity();
   transMatrix.setidentity();
-  life_time++;
+  if (life_time >= 0 && life_time <= LIFE_MAX)  {life_time++;}
+  if (life_time > LIFE_MAX) {life_time = -2;}
 }
 
 
@@ -216,11 +225,11 @@ void pieceXform::inversemap(unsigned char *inputpixmap, unsigned char *outputpix
   Matrix3D invMatrix;
   invMatrix = transMatrix.inverse();
 
-  if (life_time >= 0)
+  for (int row_out = out_py; row_out < out_py + out_pyres; row_out++)  // output image row
   {
-    for (int row_out = out_py; row_out < out_py + out_pyres; row_out++)  // output image row
+    for (int col_out = out_px; col_out < out_px + out_pxres; col_out++)  // output image col
     {
-      for (int col_out = out_px; col_out < out_px + out_pxres; col_out++)  // output image col
+      if (life_time > 0)
       {
         // output coordinate
         Vector2D xy;
@@ -258,26 +267,30 @@ void pieceXform::inversemap(unsigned char *inputpixmap, unsigned char *outputpix
 
 void pieceXform::piecemotion(unsigned char *inputpixmap, unsigned char *outputpixmap, int pic_xres, int pic_yres)
 {
-  if (life_time >= 0)
+  if (life_time != -1)
   {
     makehole(outputpixmap, pic_xres);
 
-    double rotation, scale_factor, transx, transy;
+    double rotation, scale_factor, transx, transy, shearx, sheary;
 
-    srand(time(NULL));
+    // srand(time(NULL));
+    rotation = double(rand() % (90));
 
-    rotation = rand() % (360);
     scale_factor = pow(SCALE_RATE, double(life_time));
     transx = life_time * v_x;
     transy = life_time * v_y;
 
-    cout << "transparameter: " << rotation << " " << scale_factor << " " << transx << " " << transy << " " << perspective_distance << endl;
+    // srand(time(NULL));
+    shearx = (rand() % (10)) / double(10);
+
+    // srand(time(NULL));
+    sheary = (rand() % (10)) / double(10);
 
     generateMatrix('s', scale_factor, scale_factor);
     generateMatrix('r', rotation, 0);
     generateMatrix('t', transx, transy);
-    // generateMatrix('p', perspective_distance, 0);
-    generateMatrix('h', 0.5, 1);
+    generateMatrix('h', shearx, sheary);
+
     boundingbox();
     transMatrix.print();
     inversemap(inputpixmap, outputpixmap, pic_xres, pic_yres);

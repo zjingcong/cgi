@@ -8,6 +8,7 @@
 # include <math.h>
 # include <cmath>
 # include <iomanip>
+# include "time.h"
 
 # include "disolvefx.h"
 # include "greenscreen.h"
@@ -22,7 +23,10 @@
 using namespace std;
 OIIO_NAMESPACE_USING
 
-# define PIECE_SCALE 10.00
+# define PIECE_SCALE 20.00
+# define DISOLVE_START_X 100
+# define DISOLVE_START_Y 0
+
 # define max(x, y) (x > y ? x : y)
 # define min(x, y) (x < y ? x : y)
 
@@ -32,7 +36,9 @@ static string inputImage;  // input image file name
 static string outputImage; // output image file name
 static int xres, yres;  // input image size: width, height
 static int xres_out, yres_out;  // output image size: width, height
-static int img_time;
+static int img_time = -1;
+static int x_num; // piece col number
+static int y_num; // piece row number
 static pieceXform *piece_list;
 
 
@@ -76,7 +82,6 @@ void preprocessing()
 
 void disolvepieces()
 {
-  int x_num, y_num;
   x_num = ceil(xres / double(PIECE_SCALE));
   y_num = ceil(yres / double(PIECE_SCALE));
 
@@ -91,12 +96,12 @@ void disolvepieces()
       int py = j * PIECE_SCALE;
       int id = j * x_num + i;
       if (i < x_num - 1 && j < y_num - 1)
-      {piece_list[id] = pieceXform(id, PIECE_SCALE, PIECE_SCALE, px, py, -1);}
+      {piece_list[id] = pieceXform(id, i, j, PIECE_SCALE, PIECE_SCALE, px, py, -1);}
       else
       {
         int pxres = xres - (x_num - 1) * PIECE_SCALE;
         int pyres = yres - (y_num - 1) * PIECE_SCALE;
-        piece_list[id] = pieceXform(id, pxres, pyres, px, py, -1);
+        piece_list[id] = pieceXform(id, i, j, pxres, pyres, px, py, -1);
       }
     }
   }
@@ -108,12 +113,59 @@ void motionSummary()
   for (int i = 0; i < xres * yres * 4; i++)
   {outputpixmap[i] = inputpixmap[i];}
 
-  if (piece_list[8].life_time < 0)  {piece_list[8].setLifetime(1);}
-  piece_list[8].xformSetting(10, 10, 0.001);
-  // unsigned char input [xres * yres * 4];
-  // for (int i = 0; i < xres * yres * 4; ++i) {input[i] = outputpixmap[i];}
-  piece_list[8].piecemotion(inputpixmap, outputpixmap, xres, yres);
+  if (img_time == 0)
+  {
+    int y = 0;
+    for (int x = 0; x < 20; x++)
+    {
+      int start_id = y * x_num + x;
+      piece_list[start_id].setLifetime(0);  // set life time to 0: start active
+      piece_list[start_id].setStarttime(img_time);
+    }
+  }
+
+  cout << "M" << endl;
+
+  if (piece_list[8].life_time == -1)  {piece_list[8].setLifetime(1);}
+  else
+  {
+//    int v_x = rand() % (10);
+//    int v_y = rand() % (10);
+    int v_x = 10;
+    int v_y = 10;
+    piece_list[8].xformSetting(v_x, v_y, 0.001);
+    piece_list[8].piecemotion(inputpixmap, outputpixmap, xres, yres);
+  }
+
+  if (piece_list[9].life_time == -1)  {piece_list[9].setLifetime(1);}
+  else
+  {
+//    int v_x = rand() % (10);
+//    int v_y = rand() % (10);
+    int v_x = 10;
+    int v_y = 10;
+    piece_list[9].xformSetting(v_x, v_y, 0.001);
+    piece_list[9].piecemotion(inputpixmap, outputpixmap, xres, yres);
+  }
+
+  cout << "lalala: " << piece_list[8].life_time << endl;
   piece_list[8].pieceUpdate();
+  piece_list[9].pieceUpdate();
+
+//  for (int i = 0; i < x_num * y_num; i++)
+//  {
+//    if (piece_list[i].life_time >= 0)
+//    {
+//      piece_list[i].setLifetime(1);
+//      srand(time(NULL));
+//      int v_x = rand() % (20);
+//      srand(time(NULL));
+//      int v_y = rand() % (20);
+//      piece_list[i].xformSetting(v_x, v_y, 0.001);
+//      piece_list[i].piecemotion(inputpixmap, outputpixmap, xres, yres);
+//      piece_list[i].pieceUpdate();
+//    }
+//  }
 }
 
 
@@ -277,7 +329,7 @@ void handleKey(unsigned char key, int x, int y)
 
     case 32:
       img_time++;
-      cout << "space press" << endl;
+      cout << "img_time: " << img_time << endl;
       motionSummary();
       glutPostRedisplay();
       break;
@@ -336,6 +388,9 @@ Main program
 */
 int main(int argc, char* argv[])
 {
+  // random seed initial
+  srand(time(NULL));
+
   // command line parser and calculate transform matrix
   getCmdOptions(argc, argv, inputImage, outputImage);
   preprocessing();

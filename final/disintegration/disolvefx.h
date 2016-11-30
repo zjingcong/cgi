@@ -4,18 +4,22 @@ class pieceXform
 {
 public:
   int pieceid;  // piece id
+  int pieceid_x;
+  int pieceid_y;
   int pxres; // piece width
   int pyres; // piece height
   int px; // left bottom corner point x
   int py; // left bottom corner point y
   int life_time;
+  int life_start_time;
 
   pieceXform()  {};
-  pieceXform(int id, int a, int b, int c, int d, int e);
+  pieceXform(int id, int id_x, int id_y, int a, int b, int c, int d, int e);
 
   double v_x, v_y, perspective_distance;
 
   void setLifetime(int t);
+  void setStarttime(int t);
   void xformSetting(double vx, double vy, double distance);
   void piecemotion(unsigned char *inputpixmap, unsigned char *outputpixmap, int pic_xres, int pic_yres);
   void pieceUpdate();
