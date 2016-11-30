@@ -80,7 +80,7 @@ void alphamask(int xres, int yres, unsigned char *inputpixmap, unsigned char *ou
   // get thresholds
   double th_hl_1, th_hl_2, th_s_1, th_s_2, th_v_1, th_v_2, th_hh_1, th_hh_2;
   get_thresholds(th_hl_1, th_hl_2, th_s_1, th_s_2, th_v_1, th_v_2, th_hh_1, th_hh_2);
-  cout << th_hh_1 << " " << th_hh_2 << endl;
+  // cout << th_hh_1 << " " << th_hh_2 << endl;
 
   // convert rgb color to hsv color
   // outputpixmap = new unsigned char [xres * yres * 4];
@@ -166,9 +166,13 @@ composition
   convert frontground image to associated color image (no need to do so for background image due to 255 alpha value)
   and do the over operation between associated frontground image and background image
 */
-void compose(unsigned char *frontpixmap, unsigned char *backpixmap, int posX, int posY)
+void compose(unsigned char *composedpixmap, unsigned char *frontpixmap, unsigned char *backpixmap, int posX, int posY, int xres, int yres)
 {
-  composedpixmap = new unsigned char [xres * yres * 4];
+  int front_w = xres;
+  int front_h = yres;
+  int backchannels = 4;
+
+  // composedpixmap = new unsigned char [xres * yres * 4];
   for (int i = 0; i < xres; i++)
   {
     for (int j = 0; j < yres; j++)

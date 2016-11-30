@@ -32,7 +32,7 @@ OIIO_NAMESPACE_USING
 
 pieceXform::pieceXform(int id, int id_x, int id_y, int a, int b, int c, int d, int e)
 {
-  srand(time(NULL));
+  // srand(time(NULL));
 
   pieceid = id;
   pieceid_x = id_x;
@@ -290,18 +290,20 @@ void pieceXform::piecemotion(unsigned char *inputpixmap, unsigned char *outputpi
   {
     double rotation, scale_factor, transx, transy, shearx, sheary;
 
-    rotation = double(rand() % (90));
+    rotation = double(rand() % (100)) - 50;
     scale_factor = pow(SCALE_RATE, double(life_time));
     transx = life_time * v_x;
     transy = life_time * v_y;
     shearx = (rand() % (10)) / double(10);
     sheary = (rand() % (10)) / double(10);
+    // int tmp = rand() % (1);
 
     generateMatrix('s', scale_factor, scale_factor);
     generateMatrix('r', rotation, 0);
     generateMatrix('t', transx, transy);
     generateMatrix('h', shearx, sheary);
-    generateMatrix('p', perspective_distance, 0);
+//    if (tmp == 0) {generateMatrix('p', perspective_distance, 0);}
+//    else {generateMatrix('p', 0, perspective_distance);}
 
     boundingbox(pic_xres, pic_yres);
     inversemap(inputpixmap, outputpixmap, pic_xres, pic_yres);

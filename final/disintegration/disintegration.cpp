@@ -31,34 +31,42 @@ OIIO_NAMESPACE_USING
 # define max(x, y) (x > y ? x : y)
 # define min(x, y) (x < y ? x : y)
 
+static int img_time = -1; // image play time
 static int play_mode = 0; // dynamic image play mode: 0 - space key, 1 - auto-play
+bool endflag = false;
+
 static unsigned char *inputpixmap;  // input image pixels pixmap
 static unsigned char *outputpixmap; // output image pixels pixmap
+static unsigned char *frontpixmap;
+static unsigned char *backpixmap;
+static unsigned char *composedpixmap;  // compose image pixels pixmap
+
 static string inputImage;  // input image file name
-static string outputImage; // output image file name
+static string backImage; // output image file name
 static int xres, yres;  // input image size: width, height
 static int xres_out, yres_out;  // output image size: width, height
-static int img_time = -1; // image play time
+
 static int x_num, y_num; // piece col number and row number
 static pieceXform *piece_list;
-
 static int piece_active_num = 0;
 static int active_id_list[1024 * 1024];
 static int active_list_index = 0;
-bool endflag = false;
 
 
-void readimage(string infilename);
+void getImageInfo(string infilename);
+void readimage(string infilename, unsigned char *inpixmap);
 void writeimage(string outfilename);
+void composeImage();
 
 
 char **getIter(char** begin, char** end, const std::string& option) {return find(begin, end, option);}
-void getCmdOptions(int argc, char **argv, string &inputImage, string &outputImage)
+void getCmdOptions(int argc, char **argv, string &inputImage, string &backImage)
 {
   if (argc < 2)
   {
     cout << "[HELP]" << endl;
-    cout << "disintegration input_image_name [play_mode_tag]" << endl;
+    cout << "disintegration input_image_name [background_image_name] [play_mode_tag]" << endl;
+    cout << "\tdefault background: white" << endl;
     cout << "[play_mode tag]" << endl;
     cout << "\tdefault space key to play the image frames" << endl;
     cout << "\t-a      auto-play the image frames" << endl;
@@ -68,13 +76,17 @@ void getCmdOptions(int argc, char **argv, string &inputImage, string &outputImag
   if (iter != argv + argc)  {play_mode = 1;  cout << "dynamic image play mode: auto-play" << endl;}
   inputImage = argv[1];
   cout << "Input image: " << inputImage << endl;
+  if (argc >= 3 && play_mode == 0)  {backImage = argv[2]; cout << "Background image: " << backImage << endl;}
+  if (play_mode == 1 && argc >= 4)  {backImage = argv[2]; cout << "Background image: " << backImage << endl;}
 }
 
 
 void preprocessing()
 {
+  getImageInfo(inputImage);
   // read input image
-  readimage(inputImage);
+  inputpixmap = new unsigned char [xres * yres * 4];
+  readimage(inputImage, inputpixmap);
   // allocate memory for output image
   xres_out = xres;
   yres_out = yres;
@@ -84,9 +96,17 @@ void preprocessing()
   // write out the image
   writeimage("alphamask.png");
   // update display image
-  readimage("alphamask.png");
-  for (int i = 0; i < xres * yres * 4; i++)
-  {outputpixmap[i] = inputpixmap[i];}
+  readimage("alphamask.png", inputpixmap);
+  readimage("alphamask.png", outputpixmap);
+
+  backpixmap = new unsigned char [xres_out * yres_out * 4];
+  for (int i = 0; i < xres_out * yres_out * 4; ++i) {backpixmap[i] = 255;}
+  if (backImage != "")
+  {readimage(backImage, backpixmap);}
+
+  frontpixmap = new unsigned char [xres_out * yres_out * 4];
+  composedpixmap = new unsigned char [xres_out * yres_out * 4];
+  composeImage();
 }
 
 
@@ -94,8 +114,6 @@ void disolvepieces()
 {
   x_num = ceil(xres / double(PIECE_SCALE));
   y_num = ceil(yres / double(PIECE_SCALE));
-
-  cout << "x_num: " << x_num << " y_num: " << y_num << endl;
 
   piece_list = new pieceXform [x_num * y_num];
   for (int i = 0; i < x_num; ++i)
@@ -167,7 +185,7 @@ void motionSummary()
     {
       int v_x = rand() % (10) - 5;
       int v_y = rand() % (5) + 5;
-      piece_list[i].xformSetting(v_x, v_y, 0.001);
+      piece_list[i].xformSetting(v_x, v_y, 0);
       piece_list[i].piecemotion(inputpixmap, outputpixmap, xres, yres);
     }
   }
@@ -191,14 +209,32 @@ void pieceStatusUpdate()
 
 void composeImage()
 {
+  delete [] frontpixmap;
+  delete [] composedpixmap;
+  delete [] backpixmap;
+  frontpixmap = new unsigned char [xres_out * yres_out * 4];
+  composedpixmap = new unsigned char [xres_out * yres_out * 4];
+  backpixmap = new unsigned char [xres_out * yres_out * 4];
+  for (int i = 0; i < xres_out * yres_out * 4; ++i) {backpixmap[i] = 255;}
+  if (backImage != "")
+  {readimage(backImage, backpixmap);}
 
+  associatedColor(outputpixmap, frontpixmap, xres_out, yres_out);
+  compose(composedpixmap, frontpixmap, backpixmap, 0, 0, xres_out, yres_out);
 }
 
 
-/*
-get the image pixmap
-*/
-void readimage(string infilename)
+void displayFresh()
+{
+  img_time++;
+  motionSummary();
+  pieceStatusUpdate();
+  composeImage();
+  glutPostRedisplay();
+}
+
+
+void getImageInfo(string infilename)
 {
   // read the input image and store as a pixmap
   ImageInput *in = ImageInput::open(infilename);
@@ -218,11 +254,34 @@ void readimage(string infilename)
     cout << "input image size: " << xres << "x" << yres << endl;
     cout << "channels: " << channels << endl;
 
+    in -> close();  // close the file
+    delete in;    // free ImageInput
+  }
+}
+
+
+/*
+get the image pixmap
+*/
+void readimage(string infilename, unsigned char *inpixmap)
+{
+  // read the input image and store as a pixmap
+  ImageInput *in = ImageInput::open(infilename);
+  if (!in)
+  {
+    cerr << "Cannot get the input image for " << infilename << ", error = " << geterror() << endl;
+    exit(0);
+  }
+  else
+  {
+    // get the image size and channels information, allocate space for the image
+    const ImageSpec &spec = in -> spec();
+    int channels = spec.nchannels;
+
     unsigned char tmppixmap[xres * yres * channels];
     in -> read_image(TypeDesc::UINT8, tmppixmap);
 
     // convert input image to RGBA image
-    inputpixmap = new unsigned char [xres * yres * 4];  // input image pixel map is 4 channels
     for (int row = 0; row < yres; row++)
     {
       for (int col = 0; col < xres; col++)
@@ -230,19 +289,19 @@ void readimage(string infilename)
         switch (channels)
         {
           case 1:
-            inputpixmap[(row * xres + col) * 4] = tmppixmap[row * xres + col];
-            inputpixmap[(row * xres + col) * 4 + 1] = inputpixmap[(row * xres + col) * 4];
-            inputpixmap[(row * xres + col) * 4 + 2] = inputpixmap[(row * xres + col) * 4];
-            inputpixmap[(row * xres + col) * 4 + 3] = 255;
+            inpixmap[(row * xres + col) * 4] = tmppixmap[row * xres + col];
+            inpixmap[(row * xres + col) * 4 + 1] = inpixmap[(row * xres + col) * 4];
+            inpixmap[(row * xres + col) * 4 + 2] = inpixmap[(row * xres + col) * 4];
+            inpixmap[(row * xres + col) * 4 + 3] = 255;
             break;
           case 3:
             for (int k = 0; k < 3; k++)
-            {inputpixmap[(row * xres + col) * 4 + k] = tmppixmap[(row * xres + col) * 3 + k];}
-            inputpixmap[(row * xres + col) * 4 + 3] = 255;
+            {inpixmap[(row * xres + col) * 4 + k] = tmppixmap[(row * xres + col) * 3 + k];}
+            inpixmap[(row * xres + col) * 4 + 3] = 255;
             break;
           case 4:
             for (int k = 0; k < 4; k++)
-            {inputpixmap[(row * xres + col) * 4 + k] = tmppixmap[(row * xres + col) * 4 + k];}
+            {inpixmap[(row * xres + col) * 4 + k] = tmppixmap[(row * xres + col) * 4 + k];}
             break;
           default:
             return;
@@ -257,10 +316,10 @@ void readimage(string infilename)
       for (int col = 0; col < xres; col++)
       {
         for (int k = 0; k < 4; k++)
-        {displaypixmap[(row * xres + col) * 4 + k] = inputpixmap[((yres - 1 - row) * xres + col) * 4 + k];}
+        {displaypixmap[(row * xres + col) * 4 + k] = inpixmap[((yres - 1 - row) * xres + col) * 4 + k];}
       }
     }
-    for (int i = 0; i < xres * yres * 4; i++) {inputpixmap[i] = displaypixmap[i];}
+    for (int i = 0; i < xres * yres * 4; i++) {inpixmap[i] = displaypixmap[i];}
 
     in -> close();  // close the file
     delete in;    // free ImageInput
@@ -336,8 +395,8 @@ void display(const unsigned char *pixmap, int w, int h)
 
   glFlush();
 }
-void displayInput() {display(inputpixmap, xres, yres);}
-void displayOutput()  {display(outputpixmap, xres_out, yres_out);}
+// void displayOutput()  {display(outputpixmap, xres_out, yres_out);}
+void displayComposed() {display(composedpixmap, xres_out, yres_out);}
 
 
 /*
@@ -355,12 +414,7 @@ void handleKey(unsigned char key, int x, int y)
 
     case 32:
       if (endflag == false)
-      {
-        img_time++;
-        motionSummary();
-        pieceStatusUpdate();
-        glutPostRedisplay();
-      }
+      {displayFresh();}
       else  {exit(0);}
       break;
 
@@ -415,10 +469,7 @@ void handleReshape_out(int w, int h)  {handleReshape(w, h, xres_out, yres_out);}
 
 static void timerFunc(int value)
 {
-  img_time++;
-  motionSummary();
-  pieceStatusUpdate();
-  glutPostRedisplay();
+  displayFresh();
   if (endflag == true)  {exit(0);}
   glutTimerFunc(250,timerFunc,0);
 }
@@ -433,7 +484,7 @@ int main(int argc, char* argv[])
   srand(time(NULL));
 
   // command line parser and calculate transform matrix
-  getCmdOptions(argc, argv, inputImage, outputImage);
+  getCmdOptions(argc, argv, inputImage, backImage);
   preprocessing();
   disolvepieces();
 
@@ -447,7 +498,8 @@ int main(int argc, char* argv[])
   glutInitWindowSize(xres, yres);
   glutCreateWindow("Disintegration Effects");
   // set up the callback routines to be called when glutMainLoop() detects an event
-  glutDisplayFunc(displayOutput);	  // display callback
+  // glutDisplayFunc(displayOutput);	  // display callback
+  glutDisplayFunc(displayComposed);	  // display callback
   if (play_mode == 0)  {glutKeyboardFunc(handleKey);}	  // keyboard callback
   glutMouseFunc(mouseClick);  // mouse callback
   glutReshapeFunc(handleReshape_in); // window resize callback
@@ -460,6 +512,9 @@ int main(int argc, char* argv[])
   // release memory
   delete [] inputpixmap;
   delete [] outputpixmap;
+  delete [] frontpixmap;
+  delete [] backpixmap;
+  delete [] composedpixmap;
 
   return 0;
 }
