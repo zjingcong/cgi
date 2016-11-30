@@ -1,3 +1,10 @@
+/*
+This is a class for disolve pieces
+  piece current status
+  piece initial status
+  piece motion functions using warping
+*/
+
 # include <OpenImageIO/imageio.h>
 
 # include <cstdlib>
@@ -30,9 +37,11 @@ OIIO_NAMESPACE_USING
 # define min(x, y) (x < y ? x : y)
 
 
+pieceXform::pieceXform()  {srand(time(NULL));}
+
 pieceXform::pieceXform(int id, int id_x, int id_y, int a, int b, int c, int d, int e)
 {
-  // srand(time(NULL));
+  srand(time(NULL));
 
   pieceid = id;
   pieceid_x = id_x;

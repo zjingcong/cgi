@@ -1,3 +1,7 @@
+/*
+green screen and composition functions
+*/
+
 # include <OpenImageIO/imageio.h>
 
 # include <cstdlib>

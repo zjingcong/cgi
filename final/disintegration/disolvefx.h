@@ -1,3 +1,10 @@
+/*
+This is a class for disolve pieces
+  piece current status
+  piece initial status
+  piece motion functions using warping
+*/
+
 # include "matrix.h"
 # include "time.h"
 
@@ -14,7 +21,7 @@ public:
   int life_time;
   int life_start_time;
 
-  pieceXform()  {};
+  pieceXform();
   pieceXform(int id, int id_x, int id_y, int a, int b, int c, int d, int e);
 
   double v_x, v_y, perspective_distance;

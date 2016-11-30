@@ -1,3 +1,33 @@
+/*
+Final Project: Image Disolve Effects
+ ------------------------------
+|Name: Jingcong Zhang         |
+|Email: jingcoz@g.clemson.edu |
+|Date: 2016-11-29             |
+ ------------------------------
+This program will read an input image with green screen background,
+extract the main object in the image and display a series of images with disintergrated object to show the disolve effects,
+and then compose the disolved object with an selectable background image, the default background image is pure white.
+
+
+This program provide two display mode:
+  default mode: skip the current image frame to the next frame by pressing spacebar
+  auto-play mode
+
+Usage:
+disintegration input_image_name [background_image_name] [play_mode_tag]
+  default background: white
+  [play_mode_tag]
+    default mode: space key to play the image frames
+    -a: auto-play mode
+
+Mouse Response:
+  Click the display window to quit the program.
+Keyboard Response:
+  Press q, Q or exit to quit the program.
+  Press spacebar to play the next image frame under the default display mode.
+*/
+
 # include <OpenImageIO/imageio.h>
 # include <stdlib.h>
 # include <cstdlib>
@@ -59,6 +89,9 @@ void writeimage(string outfilename);
 void composeImage();
 
 
+/*
+input command argv parser
+*/
 char **getIter(char** begin, char** end, const std::string& option) {return find(begin, end, option);}
 void getCmdOptions(int argc, char **argv, string &inputImage, string &backImage)
 {
@@ -110,6 +143,9 @@ void preprocessing()
 }
 
 
+/*
+disolve pieces generator
+*/
 void disolvepieces()
 {
   x_num = ceil(xres / double(PIECE_SCALE));
@@ -136,6 +172,9 @@ void disolvepieces()
 }
 
 
+/*
+move the disolve pieces
+*/
 void motionSummary()
 {
   for (int i = 0; i < xres * yres * 4; i++)
@@ -200,6 +239,9 @@ void motionSummary()
 }
 
 
+/*
+update the pieces status
+*/
 void pieceStatusUpdate()
 {
   for (int i = 0; i < x_num * y_num; i++)
@@ -207,6 +249,9 @@ void pieceStatusUpdate()
 }
 
 
+/*
+compose the disolve object with background image
+*/
 void composeImage()
 {
   delete [] frontpixmap;
@@ -415,7 +460,7 @@ void handleKey(unsigned char key, int x, int y)
     case 32:
       if (endflag == false)
       {displayFresh();}
-      else  {exit(0);}
+      else  {cout << "Disolved image play end." << endl; exit(0);}
       break;
 
     default:		// not a valid key -- just ignore it
@@ -467,10 +512,13 @@ void handleReshape_in(int w, int h) {handleReshape(w, h, xres, yres);}
 void handleReshape_out(int w, int h)  {handleReshape(w, h, xres_out, yres_out);}
 
 
+/*
+opengl timer
+*/
 static void timerFunc(int value)
 {
   displayFresh();
-  if (endflag == true)  {exit(0);}
+  if (endflag == true)  {cout << "Disolved image play end." << endl; exit(0);}
   glutTimerFunc(250,timerFunc,0);
 }
 
