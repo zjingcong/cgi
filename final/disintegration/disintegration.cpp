@@ -29,8 +29,10 @@ Keyboard Response:
 */
 
 # include <OpenImageIO/imageio.h>
+# include <stdio.h>
 # include <stdlib.h>
 # include <cstdlib>
+# include <sstream>
 # include <iostream>
 # include <fstream>
 # include <string>
@@ -85,7 +87,7 @@ static int active_list_index = 0;
 
 void getImageInfo(string infilename);
 void readimage(string infilename, unsigned char *inpixmap);
-void writeimage(string outfilename);
+void writeimage(string outfilename, unsigned char *outpixmap);
 void composeImage();
 
 
@@ -127,7 +129,7 @@ void preprocessing()
   // green screen alpha mask generation
   alphamask(xres, yres, inputpixmap, outputpixmap);
   // write out the image
-  writeimage("alphamask.png");
+  writeimage("alphamask.png", outputpixmap);
   // update display image
   readimage("alphamask.png", inputpixmap);
   readimage("alphamask.png", outputpixmap);
@@ -276,6 +278,13 @@ void displayFresh()
   pieceStatusUpdate();
   composeImage();
   glutPostRedisplay();
+
+  std::ostringstream timeStr;
+  long num = img_time;
+  timeStr << num;
+  string outFrameName;
+  outFrameName = "out_f" + timeStr.str() + ".png";
+  writeimage(outFrameName, composedpixmap);
 }
 
 
@@ -375,7 +384,7 @@ void readimage(string infilename, unsigned char *inpixmap)
 /*
 write out the associated color image from image pixel map
 */
-void writeimage(string outfilename)
+void writeimage(string outfilename, unsigned char *outpixmap)
 {
   // create the subclass instance of ImageOutput which can write the right kind of file format
   ImageOutput *out = ImageOutput::create(outfilename);
@@ -392,7 +401,7 @@ void writeimage(string outfilename)
       for (int col = 0; col < xres_out; col++)
       {
         for (int k = 0; k < 4; k++)
-        {outmap[(row * xres + col) * 4 + k] = outputpixmap[((yres - 1 - row) * xres + col) * 4 + k];}
+        {outmap[(row * xres + col) * 4 + k] = outpixmap[((yres - 1 - row) * xres + col) * 4 + k];}
       }
     }
 
