@@ -48,6 +48,22 @@ pieceXform::pieceXform(int id, int id_x, int id_y, int a, int b, int c, int d, i
 }
 
 
+void pieceXform::pieceXformInit(int id, int id_x, int id_y, int a, int b, int c, int d, int e)
+{
+  pieceid = id;
+  pieceid_x = id_x;
+  pieceid_y = id_y;
+  pxres = a;
+  pyres = b;
+  px = c;
+  py = d;
+  life_time = e;
+  life_start_time = -1;
+
+  getinputcorners();
+}
+
+
 void pieceXform::setLifetime(int t) {life_time = t;}
 void pieceXform::setStarttime(int t)  {life_start_time = t;}
 
@@ -64,7 +80,7 @@ void pieceXform::makehole(unsigned char *outputpixmap, int pic_xres)
 {
   if (life_time != -1)
   {
-    cout << "makehole_life_time: " << life_time << endl;
+    // cout << "makehole_life_time: " << life_time << endl;
     for (int row_in = py; row_in < py + pyres; row_in++)
     {
       for (int col_in = px; col_in < px + pxres; col_in++)
@@ -220,8 +236,8 @@ projective warp inverse map
 */
 void pieceXform::inversemap(unsigned char *inputpixmap, unsigned char *outputpixmap, int pic_xres, int pic_yres)
 {
-  cout << "inversemap" << endl;
-  cout << "life_time: " << life_time << endl;
+//  cout << "inversemap" << endl;
+//  cout << "life_time: " << life_time << endl;
   Matrix3D invMatrix;
   invMatrix = transMatrix.inverse();
 
@@ -269,33 +285,22 @@ void pieceXform::piecemotion(unsigned char *inputpixmap, unsigned char *outputpi
 {
   if (life_time != -1)
   {
-    makehole(outputpixmap, pic_xres);
-
     double rotation, scale_factor, transx, transy, shearx, sheary;
 
-    // srand(time(NULL));
     rotation = double(rand() % (90));
-
     scale_factor = pow(SCALE_RATE, double(life_time));
     transx = life_time * v_x;
     transy = life_time * v_y;
-
-    // srand(time(NULL));
     shearx = (rand() % (10)) / double(10);
-
-    // srand(time(NULL));
     sheary = (rand() % (10)) / double(10);
 
     generateMatrix('s', scale_factor, scale_factor);
     generateMatrix('r', rotation, 0);
     generateMatrix('t', transx, transy);
     generateMatrix('h', shearx, sheary);
+    generateMatrix('p', perspective_distance, 0);
 
     boundingbox();
-    transMatrix.print();
     inversemap(inputpixmap, outputpixmap, pic_xres, pic_yres);
-
-    cout << "input: " << px << " " << py << " " << pxres << " " << pyres << endl;
-    cout << "output: " << out_px << " " << out_py << " " << out_pxres << " " << out_pyres << endl;
   }
 }
