@@ -26,39 +26,48 @@ OIIO_NAMESPACE_USING
 # define PIECE_SCALE 20.00
 # define DISOLVE_START_X 100
 # define DISOLVE_START_Y 0
+# define FRAME_INTERVAL 200
 
 # define max(x, y) (x > y ? x : y)
 # define min(x, y) (x < y ? x : y)
 
+static int play_mode = 0; // dynamic image play mode: 0 - space key, 1 - auto-play
 static unsigned char *inputpixmap;  // input image pixels pixmap
 static unsigned char *outputpixmap; // output image pixels pixmap
 static string inputImage;  // input image file name
 static string outputImage; // output image file name
 static int xres, yres;  // input image size: width, height
 static int xres_out, yres_out;  // output image size: width, height
-static int img_time = -1;
-static int x_num; // piece col number
-static int y_num; // piece row number
+static int img_time = -1; // image play time
+static int x_num, y_num; // piece col number and row number
 static pieceXform *piece_list;
+
 static int piece_active_num = 0;
+static int active_id_list[1024 * 1024];
+static int active_list_index = 0;
+bool endflag = false;
 
 
 void readimage(string infilename);
 void writeimage(string outfilename);
 
 
+char **getIter(char** begin, char** end, const std::string& option) {return find(begin, end, option);}
 void getCmdOptions(int argc, char **argv, string &inputImage, string &outputImage)
 {
-  if (argc >= 2)
-  {
-    inputImage = argv[1];
-    cout << "Input image: " << inputImage << endl;
-  }
-  else
+  if (argc < 2)
   {
     cout << "[HELP]" << endl;
-    cout << "disintegration input_image_name" << endl;
+    cout << "disintegration input_image_name [play_mode_tag]" << endl;
+    cout << "[play_mode tag]" << endl;
+    cout << "\tdefault space key to play the image frames" << endl;
+    cout << "\t-a      auto-play the image frames" << endl;
+    exit(0);
   }
+  char **iter = getIter(argv, argv + argc, "-a");
+  if (iter != argv + argc)  {play_mode = 1;  cout << "dynamic image play mode: auto-play" << endl;}
+  inputImage = argv[1];
+  cout << "Input image: " << inputImage << endl;
 }
 
 
@@ -115,7 +124,7 @@ void motionSummary()
   {outputpixmap[i] = inputpixmap[i];}
 
   // active piece generator
-  int active_id_list[x_num * y_num];
+  int new_active_id_list[x_num * y_num];
   int i = 0;
   int new_active_num = 0;
   if (img_time >= 0 && img_time < y_num)
@@ -123,28 +132,29 @@ void motionSummary()
     int y = img_time;
     for (int x = 0; x < x_num; x++)
     {
-      active_id_list[i] = y * x_num + x;
+      new_active_id_list[i] = y * x_num + x;
+      active_id_list[active_list_index] = y * x_num + x;
+
       i++;
+      active_list_index++;
       piece_active_num++;
       new_active_num++;
     }
     // start the active piece
     for (int i = 0; i < new_active_num; i++)
     {
-      if (piece_list[active_id_list[i]].life_time == -1)
+      if (piece_list[new_active_id_list[i]].life_time == -1)
       {
-        piece_list[active_id_list[i]].setLifetime(0);
-        piece_list[active_id_list[i]].setStarttime(img_time);
+        piece_list[new_active_id_list[i]].setLifetime(0);
+        piece_list[new_active_id_list[i]].setStarttime(img_time);
       }
     }
   }
 
-  cout << "active_num: " << piece_active_num << endl;
-
   // make hole
   for (int i = 0; i < x_num * y_num; i++)
   {
-    if (piece_list[i].life_time != -1)
+    if (piece_list[i].life_time != -1 && piece_list[i].pieceid_x < x_num && piece_list[i].pieceid_y < y_num)
     {
       piece_list[i].makehole(outputpixmap, xres);
     }
@@ -155,12 +165,20 @@ void motionSummary()
   {
     if (piece_list[i].life_time != -1)
     {
-      int v_x = rand() % (5) + 5;
+      int v_x = rand() % (10) - 5;
       int v_y = rand() % (5) + 5;
       piece_list[i].xformSetting(v_x, v_y, 0.001);
       piece_list[i].piecemotion(inputpixmap, outputpixmap, xres, yres);
     }
   }
+
+  // clean
+  int die_num = 0;
+  for (int i = 0; i < piece_active_num; i++)
+  {
+    if (piece_list[active_id_list[i]].life_time == -2)  {die_num++;}
+  }
+  if (die_num == piece_active_num)  {endflag = true;}
 }
 
 
@@ -168,6 +186,12 @@ void pieceStatusUpdate()
 {
   for (int i = 0; i < x_num * y_num; i++)
   {piece_list[i].pieceUpdate();}
+}
+
+
+void composeImage()
+{
+
 }
 
 
@@ -291,7 +315,7 @@ void writeimage(string outfilename)
       out -> write_image(TypeDesc::UINT8, pixmap);
     }
 
-    cout << "Write the warped image to image file " << outfilename << endl;
+    cout << "Write tmp image to image file " << outfilename << endl;
     // close the file and free the ImageOutput I created
     out -> close();
     delete out;
@@ -330,11 +354,14 @@ void handleKey(unsigned char key, int x, int y)
       exit(0);
 
     case 32:
-      img_time++;
-      cout << "img_time: " << img_time << endl;
-      motionSummary();
-      pieceStatusUpdate();
-      glutPostRedisplay();
+      if (endflag == false)
+      {
+        img_time++;
+        motionSummary();
+        pieceStatusUpdate();
+        glutPostRedisplay();
+      }
+      else  {exit(0);}
       break;
 
     default:		// not a valid key -- just ignore it
@@ -386,6 +413,17 @@ void handleReshape_in(int w, int h) {handleReshape(w, h, xres, yres);}
 void handleReshape_out(int w, int h)  {handleReshape(w, h, xres_out, yres_out);}
 
 
+static void timerFunc(int value)
+{
+  img_time++;
+  motionSummary();
+  pieceStatusUpdate();
+  glutPostRedisplay();
+  if (endflag == true)  {exit(0);}
+  glutTimerFunc(250,timerFunc,0);
+}
+
+
 /*
 Main program
 */
@@ -405,25 +443,15 @@ int main(int argc, char* argv[])
   // create the graphics window, giving width, height, and title text
   glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
 
-  // display the input image
-  // first window: input image
+  // display
   glutInitWindowSize(xres, yres);
   glutCreateWindow("Disintegration Effects");
   // set up the callback routines to be called when glutMainLoop() detects an event
   glutDisplayFunc(displayOutput);	  // display callback
-  glutKeyboardFunc(handleKey);	  // keyboard callback
+  if (play_mode == 0)  {glutKeyboardFunc(handleKey);}	  // keyboard callback
   glutMouseFunc(mouseClick);  // mouse callback
   glutReshapeFunc(handleReshape_in); // window resize callback
-
-//  // display the output image
-//  // second window: output image
-//  glutInitWindowSize(xres_out, yres_out);
-//  glutCreateWindow("Output Image");
-//  // set up the callback routines to be called when glutMainLoop() detects an event
-//  glutDisplayFunc(displayOutput);	  // display callback
-//  glutKeyboardFunc(handleKey);	  // keyboard callback
-//  // if (mode == 2)  {glutMouseFunc(mouseClick);}  // mouse callback
-//  glutReshapeFunc(handleReshape_out); // window resize callback
+  if (play_mode == 1)  {glutTimerFunc(FRAME_INTERVAL,timerFunc,0);} // timer callback
 
   // Routine that loops forever looking for events. It calls the registered
   // callback routine to handle each event that is detected

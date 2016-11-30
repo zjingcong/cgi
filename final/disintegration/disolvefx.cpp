@@ -78,9 +78,8 @@ void pieceXform::xformSetting(double vx, double vy, double distance)
 
 void pieceXform::makehole(unsigned char *outputpixmap, int pic_xres)
 {
-  if (life_time != -1)
+  if (life_time != -1 && life_time != 0)
   {
-    // cout << "makehole_life_time: " << life_time << endl;
     for (int row_in = py; row_in < py + pyres; row_in++)
     {
       for (int col_in = px; col_in < px + pxres; col_in++)
@@ -173,7 +172,7 @@ void pieceXform::generateMatrix(char tag, double p1, double p2)
 /*
 four corners forward warp to make space for output image pixmap
 */
-void pieceXform::boundingbox()
+void pieceXform::boundingbox(int pic_xres, int pic_yres)
 {
   Vector2D u0, u1, u2, u3;
   u0.x = 0;
@@ -219,6 +218,9 @@ void pieceXform::boundingbox()
   trans2[0][2] = px;
   trans2[1][2] = py;
   transMatrix = trans2 * transMatrix;
+
+  out_pxres = (out_px + out_pxres > pic_xres) ? (pic_xres - out_px) : (out_pxres);
+  out_pyres = (out_py + out_pyres > pic_yres) ? (pic_yres - out_py) : (out_pyres);
 }
 
 
@@ -236,8 +238,6 @@ projective warp inverse map
 */
 void pieceXform::inversemap(unsigned char *inputpixmap, unsigned char *outputpixmap, int pic_xres, int pic_yres)
 {
-//  cout << "inversemap" << endl;
-//  cout << "life_time: " << life_time << endl;
   Matrix3D invMatrix;
   invMatrix = transMatrix.inverse();
 
@@ -270,14 +270,17 @@ void pieceXform::inversemap(unsigned char *inputpixmap, unsigned char *outputpix
             {outputpixmap[(row_out * pic_xres + col_out) * 4 + k] = inputpixmap[(row_out * pic_xres + col_out) * 4 + k];}
           }
         }
-//        else
-//        {
-//          for (int k = 0; k < 4; k++)
-//          {outputpixmap[(row_out * pic_xres + col_out) * 4 + k] = inputpixmap[(row_out * pic_xres + col_out) * 4 + k];}
-//        }
+      }
+      if (life_time == -2)
+      {
+        for (int k = 0; k < 4; k++)
+        {outputpixmap[(row_out * pic_xres + col_out) * 4 + k] = 0;}
       }
     }
   }
+
+  if (out_px + out_pxres > pic_xres || out_px < 0 || out_py + out_pyres > pic_yres || out_py < 0)
+  {life_time = -2;}
 }
 
 
@@ -300,7 +303,7 @@ void pieceXform::piecemotion(unsigned char *inputpixmap, unsigned char *outputpi
     generateMatrix('h', shearx, sheary);
     generateMatrix('p', perspective_distance, 0);
 
-    boundingbox();
+    boundingbox(pic_xres, pic_yres);
     inversemap(inputpixmap, outputpixmap, pic_xres, pic_yres);
   }
 }

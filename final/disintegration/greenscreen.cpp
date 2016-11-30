@@ -122,85 +122,85 @@ void alphamask(int xres, int yres, unsigned char *inputpixmap, unsigned char *ou
 // alphamask generation end
 
 
-//// composition start
-///*
-//generate associated color image
-//*/
-//void associatedColor(const unsigned char *pixmap, unsigned char *associatedpixmap, int w, int h)
-//{
-//  for (int i = 0; i < w; i++)
-//  {
-//    for (int j = 0; j < h; j++)
-//    {
-//      float r, g, b, alpha, a;
-//      r = pixmap[(j * w + i) * 4];
-//      g = pixmap[(j * w + i) * 4 + 1];
-//      b = pixmap[(j * w + i) * 4 + 2];
-//      alpha = pixmap[(j * w + i) * 4 + 3];
-//
-//      a = float(alpha) / 255;
-//      associatedpixmap[(j * w + i) * 4] = float(r) * a;
-//      associatedpixmap[(j * w + i) * 4 + 1] = float(g) * a;
-//      associatedpixmap[(j * w + i) * 4 + 2] = float(b) * a;
-//      associatedpixmap[(j * w + i) * 4 + 3] = alpha;
-//    }
-//  }
-//}
-//
-//
-///*
-//over operation
-//  front value, back value and alpha value on scale 0-255
-//*/
-//int over(int front, int back, int alpha)
-//{
-//  int composedValue;
-//  composedValue = float(front) + (1 - (float(alpha) / 255)) * float(back);
-//
-//  return composedValue;
-//}
-//
-//
-///*
-//composition
-//  convert frontground image to associated color image (no need to do so for background image due to 255 alpha value)
-//  and do the over operation between associated frontground image and background image
-//*/
-//void compose(unsigned char *frontpixmap, unsigned char *backpixmap, int posX, int posY)
-//{
-//  composedpixmap = new unsigned char [xres * yres * 4];
-//  for (int i = 0; i < xres; i++)
-//  {
-//    for (int j = 0; j < yres; j++)
-//    {
-//      // get associated frontground image pixel value
-//      float frontR = 0;
-//      float frontG = 0;
-//      float frontB = 0;
-//      float frontA = 0;
-//      if (i >= posX && i < posX + front_w && j >= posY && j < posY + front_h)
-//      {
-//        int x, y;
-//        x = i - posX;
-//        y = j - posY;
-//        frontR = frontpixmap[(y * front_w + x) * 4];
-//        frontG = frontpixmap[(y * front_w + x) * 4 + 1];
-//        frontB = frontpixmap[(y * front_w + x) * 4 + 2];
-//        frontA = frontpixmap[(y * front_w + x) * 4 + 3];
-//      }
-//
-//      // get associated background image pixel value (background image alpha = 255)
-//      float backR, backG, backB;
-//      backR = backpixmap[(j * xres + i) * backchannels];
-//      backG = backpixmap[(j * xres + i) * backchannels + 1];
-//      backB = backpixmap[(j * xres + i) * backchannels + 2];
-//
-//      // over operation for each channel value and set alpha value as 255
-//      composedpixmap[(j * xres + i) * 4] = over(frontR, backR, frontA);
-//      composedpixmap[(j * xres + i) * 4 + 1] = over(frontG, backG, frontA);
-//      composedpixmap[(j * xres + i) * 4 + 2] = over(frontB, backB, frontA);
-//      composedpixmap[(j * xres + i) * 4 + 3] = 255;
-//    }
-//  }
-//}
-//// composition end
+// composition start
+/*
+generate associated color image
+*/
+void associatedColor(const unsigned char *pixmap, unsigned char *associatedpixmap, int w, int h)
+{
+  for (int i = 0; i < w; i++)
+  {
+    for (int j = 0; j < h; j++)
+    {
+      float r, g, b, alpha, a;
+      r = pixmap[(j * w + i) * 4];
+      g = pixmap[(j * w + i) * 4 + 1];
+      b = pixmap[(j * w + i) * 4 + 2];
+      alpha = pixmap[(j * w + i) * 4 + 3];
+
+      a = float(alpha) / 255;
+      associatedpixmap[(j * w + i) * 4] = float(r) * a;
+      associatedpixmap[(j * w + i) * 4 + 1] = float(g) * a;
+      associatedpixmap[(j * w + i) * 4 + 2] = float(b) * a;
+      associatedpixmap[(j * w + i) * 4 + 3] = alpha;
+    }
+  }
+}
+
+
+/*
+over operation
+  front value, back value and alpha value on scale 0-255
+*/
+int over(int front, int back, int alpha)
+{
+  int composedValue;
+  composedValue = float(front) + (1 - (float(alpha) / 255)) * float(back);
+
+  return composedValue;
+}
+
+
+/*
+composition
+  convert frontground image to associated color image (no need to do so for background image due to 255 alpha value)
+  and do the over operation between associated frontground image and background image
+*/
+void compose(unsigned char *frontpixmap, unsigned char *backpixmap, int posX, int posY)
+{
+  composedpixmap = new unsigned char [xres * yres * 4];
+  for (int i = 0; i < xres; i++)
+  {
+    for (int j = 0; j < yres; j++)
+    {
+      // get associated frontground image pixel value
+      float frontR = 0;
+      float frontG = 0;
+      float frontB = 0;
+      float frontA = 0;
+      if (i >= posX && i < posX + front_w && j >= posY && j < posY + front_h)
+      {
+        int x, y;
+        x = i - posX;
+        y = j - posY;
+        frontR = frontpixmap[(y * front_w + x) * 4];
+        frontG = frontpixmap[(y * front_w + x) * 4 + 1];
+        frontB = frontpixmap[(y * front_w + x) * 4 + 2];
+        frontA = frontpixmap[(y * front_w + x) * 4 + 3];
+      }
+
+      // get associated background image pixel value (background image alpha = 255)
+      float backR, backG, backB;
+      backR = backpixmap[(j * xres + i) * backchannels];
+      backG = backpixmap[(j * xres + i) * backchannels + 1];
+      backB = backpixmap[(j * xres + i) * backchannels + 2];
+
+      // over operation for each channel value and set alpha value as 255
+      composedpixmap[(j * xres + i) * 4] = over(frontR, backR, frontA);
+      composedpixmap[(j * xres + i) * 4 + 1] = over(frontG, backG, frontA);
+      composedpixmap[(j * xres + i) * 4 + 2] = over(frontB, backB, frontA);
+      composedpixmap[(j * xres + i) * 4 + 3] = 255;
+    }
+  }
+}
+// composition end

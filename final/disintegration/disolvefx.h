@@ -14,7 +14,7 @@ public:
   int life_time;
   int life_start_time;
 
-  pieceXform()  {srand(time(NULL));};
+  pieceXform()  {};
   pieceXform(int id, int id_x, int id_y, int a, int b, int c, int d, int e);
 
   double v_x, v_y, perspective_distance;
@@ -39,7 +39,7 @@ private:
   int out_py; // output left bottom corner point y
 
   void getinputcorners(); // get input corners positions
-  void boundingbox(); // get output corners positions, output width and output height
+  void boundingbox(int pic_xres, int pic_yres); // get output corners positions, output width and output height
   void generateMatrix(char tag, double px, double py);
   // void makehole(unsigned char *outputpixmap, int pic_xres);
   void inversemap(unsigned char *inputpixmap, unsigned char *outputpixmap, int pic_xres, int pic_yres);
